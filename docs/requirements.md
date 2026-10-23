@@ -4,7 +4,7 @@ Audit date: 23 October 2026 (India). Source: **T005_Assignment_4_Professional_zo
 
 ## Verdict
 
-The backend implements the missing shared database, managed credential authentication, verified email, server authorization, data scoping, protected audit records and transactional registration protection. It passed 41 domain/service tests and 16 real database/authentication checks in an isolated Neon verification branch on 23 October 2026. Production deployment uses a separate branch/database and restricted runtime credentials.
+The backend implements the missing shared database, managed credential authentication, verified email, server authorization, data scoping, protected audit records and transactional registration protection. It passed 44 domain/service tests and 16 real database/authentication checks in an isolated Neon verification branch on 23 October 2026. Production deployment uses a separate branch/database and restricted runtime credentials.
 
 All 51 functional requirements have an implementation path. The operational and cross-browser limits below remain explicit: this is a tested academic prototype, not a claim of a measured production SLA.
 
@@ -129,7 +129,7 @@ The core scenarios UC-004 (create event), UC-006 (approve/reject) and UC-011 (re
 7. Fixed end-time validation for attendance, outcomes and event completion; registration closes at event start.
 8. Restricted full-workspace backup action to the administrator role.
 
-The shared database starts empty. Browser-local fictional sample records are not automatically imported into the shared workspace.
+The shared database includes clearly labelled fictional defaults added through an idempotent seed: 5 institutions, 5 contacts, 8 events, 5 registrations, 2 attendance entries and 1 outcome. Sample identities are inactive and have no managed Auth accounts. Existing real records are preserved. The seed was applied twice to the isolated verification branch to confirm duplicate prevention before application to production.
 
 ## Deployment and operational verification
 
@@ -147,7 +147,7 @@ Payment processing, admissions/exams, ERP, housing, transport, native mobile app
 
 ## Verification
 
-- 41 automated domain/service tests pass, including allowed/denied actions, lifecycle rules, payload injection and role-based data projection.
+- 44 automated domain/service tests pass, including allowed/denied actions, lifecycle rules, payload injection and role-based data projection.
 - Next.js production compilation passes locally.
 - A real-database integration runner is included in scripts/verify-integration.mjs and scripts/verify-build.mjs. It runs only when explicitly enabled against the isolated verification database. All 16 checks passed against the isolated verification database and managed Auth branch.
 - Previous browser tests apply to the earlier prototype, not proof of the new backend's live behavior.

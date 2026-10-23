@@ -4,7 +4,7 @@ An outreach management website based on Team T005's CS314 assignment PDF: six ro
 
 ## Current release status
 
-The website uses managed authentication, verified email, a central Neon database and trusted server permissions. The backend passed 41 domain/service tests and 16 isolated real-database/authentication checks, including last-seat concurrency, cross-device persistence, session revocation and audit permissions. See [the full PDF coverage audit](docs/requirements.md) for all 51 functional and 20 non-functional requirements and the limits of this verification.
+The website uses managed authentication, verified email, a central Neon database and trusted server permissions. The backend passed 44 domain/service tests and 16 isolated real-database/authentication checks, including last-seat concurrency, cross-device persistence, session revocation and audit permissions. See [the full PDF coverage audit](docs/requirements.md) for all 51 functional and 20 non-functional requirements and the limits of this verification.
 
 ## Run locally
 
@@ -22,7 +22,9 @@ The app opens on port 4173. For a production build, run `npm run build`, then `n
 
 Sign up with your own email and password, verify the email code, then sign in. New accounts receive the Student role. Only the verified email configured as `IC_OWNER_EMAIL` receives the initial Administrator role. Administrators can assign Coordinator, Approver, Institution contact, Management or Student roles and deactivate accounts. An institution contact must be linked to a valid institution. There is no client-side role selector.
 
-The shared workspace starts empty. Earlier fictional browser sample records are not imported automatically.
+The shared workspace includes clearly labelled fictional sample records: 5 institutions, 5 contacts, 8 events across the approval lifecycle, 5 registrations, 2 attendance entries and 1 outcome. Upcoming sample events include open registrations and a full small-group session. Five inactive sample identities support historical reports; they have no managed Auth accounts or passwords. Real accounts and records are preserved.
+
+`db/sample-data.mjs` defines the defaults. `node scripts/create-sample-sql.mjs > db/seed-sample.sql` regenerates the additive SQL with dates relative to today. Apply every statement in that SQL file in a single owner transaction to the intended InstituteConnect branch/database. Re-running adds only missing IDs and preserves edited records. It is never run automatically during deployment.
 
 ## Main workflows
 
@@ -42,7 +44,7 @@ The shared workspace starts empty. Earlier fictional browser sample records are 
 - `lib/workspace-service.mjs`: action allowlist, server authorization, validated fields and role-based response projection.
 - `lib/workspace-repository.js`: transactions, request idempotency, role lookup, central storage and audit writes.
 - `db/schema.sql`: application schema, confirmed-registration uniqueness and database capacity enforcement.
-- `tests/`: 41 passing domain/service checks.
+- `tests/`: 44 passing domain/service checks.
 - `scripts/verify-integration.mjs`: isolated real-auth/database tests, including competing users for one place and cross-device persistence.
 
 All workspace requests require a current verified managed session. Mutations validate origin, content type and body size. Credentials remain server-only. The restricted database role cannot rewrite audit records. Database administrators retain normal privileged maintenance access.
