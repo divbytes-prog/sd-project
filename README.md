@@ -42,22 +42,26 @@ Select one of the six demo accounts on the welcome screen. No password is requir
 - Responsive dashboard, six role-specific workspaces and mobile navigation.
 - Complete event form: category, description, date/time, mode/venue, organizer, target institutions, registration dates, capacity, eligibility and instructions.
 - Draft → Pending → Approved → Published → Completed lifecycle, rejection/resubmission and cancellation.
-- Institution and contact creation/editing, search, relationships and engagement history.
+- Institution/contact creation and editing, designated primary contacts, search, relationships and engagement history.
 - Student/institution registrations, cancellation, duplicate prevention, capacity limits, registration period and eligibility validation.
-- Past-event attendance recording/correction and event outcome records.
-- In-app registration, approval, reminder and cancellation notifications, with read/unread status.
-- Dynamic charts, dashboards, registration CSV, event report CSV and print-friendly reports.
-- Administrator role/status controls and an audit trail.
+- Finished-event attendance recording/correction, scoped student participation history and event outcome records.
+- In-app registration, approval, published-event-update, reminder and cancellation notifications, with read/unread status.
+- Dynamic charts, dashboards, separate registration/event/participation/outcome CSVs and print-friendly reports.
+- Administrator role/status controls, event defaults, account profile maintenance and an audit trail.
 - Browser persistence and cross-tab refresh.
 - Static deployment configuration for Vercel, security response headers, escaped user content and CSV formula neutralization.
 
 ## Prototype boundaries
 
-**This is a browser-local demonstration, not a production admissions system.** All records live in `localStorage` on the current browser/origin, while demo login uses `sessionStorage`. They persist across refreshes, but different devices and deployment domains do not share data. Clearing site storage resets the sample workspace. Export a JSON backup from Settings before clearing it. Sample dates are relative to the first visit.
+**This is a browser-local demonstration, not a production admissions system.** All records live in `localStorage` on the current browser/origin, while demo login uses `sessionStorage`. They persist across refreshes, but different devices and deployment domains do not share data. Clearing site storage resets the sample workspace. An administrator can export a JSON backup from Settings before clearing it. Sample dates are relative to the first visit.
 
 Demo roles and model permission checks illustrate the requirements; they are **not a security boundary**. Anyone with this static app can inspect its bundled fictional records and change their browser state. Do not enter real student records, passwords, or sensitive information. Real authentication, server-enforced authorization, a central transactional database, concurrent registration protection, background reminders and email/SMS delivery require a backend implementation. Notifications here are in-app; coordinators trigger reminders manually. Backup download is provided; importing backups is not implemented.
 
-The database, authentication, password recovery and external notification portions of the source requirements are documented as integration work rather than presented as working production services.
+The PDF’s real authentication, central database, security and concurrent-user requirements remain incomplete. In-app notifications work; the PDF does not mandate external email/SMS or password recovery. See the complete [51-requirement coverage audit](docs/requirements.md) for implemented, simulated and incomplete items.
+
+## Focused improvements after PDF audit
+
+Published event logistics can now change with in-app notifications to confirmed participants; approved audience/content/capacity remain fixed. Registration availability is shown explicitly. Students can inspect their own attendance. Coordinators can correct attendance directly and export dedicated participation/outcome reports. Institution primary contacts and administrator event defaults complete relevant PDF responsibilities. Attendance/outcome/completion actions wait until the scheduled event end. Existing browser records migrate without clearing registrations.
 
 ## Architecture and verification
 
@@ -68,7 +72,7 @@ The database, authentication, password recovery and external notification portio
 - `tests/workspace.test.mjs`: domain tests for lifecycle, permissions, dates, registration, capacity, cancellation, attendance, outcomes and account controls.
 - `docs/requirements.md`: requirement traceability and known limitations.
 
-Validation: `npm test` runs 19 tests. The create → submit → approve → publish → student registration workflow was also verified through the browser UI. Browser QA caught and fixed compatibility with preview environments where `crypto.randomUUID` is unavailable.
+Validation: `npm test` runs 31 tests. The create → submit → approve → publish → student registration workflow was also verified through the browser UI. Browser QA caught and fixed compatibility with preview environments where `crypto.randomUUID` is unavailable.
 
 ## Deploy on Vercel
 
