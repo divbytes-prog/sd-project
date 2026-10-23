@@ -4,7 +4,7 @@ An outreach management website based on Team T005's CS314 assignment PDF: six ro
 
 ## Current release status
 
-The live site is https://sd-project-gules.vercel.app/. It currently runs the earlier browser-local prototype. This `backend/neon` revision adds managed authentication, verified email, a central Neon database and trusted server permissions. **The backend release is awaiting encrypted deployment configuration and real-database integration verification.** See [the full PDF coverage audit](docs/requirements.md) for all 51 functional and 20 non-functional requirements and remaining checks.
+The website uses managed authentication, verified email, a central Neon database and trusted server permissions. The backend passed 41 domain/service tests and 16 isolated real-database/authentication checks, including last-seat concurrency, cross-device persistence, session revocation and audit permissions. See [the full PDF coverage audit](docs/requirements.md) for all 51 functional and 20 non-functional requirements and the limits of this verification.
 
 ## Run locally
 
@@ -57,6 +57,6 @@ Configure the deployed origin as a trusted domain on its Neon Auth branch. `APP_
 
 ## Operational limits
 
-This is an academic working prototype. Real backend integration, deployment and production smoke checks remain pending. Response-time targets, increasing concurrency, backup restoration, uptime and Safari/Firefox/mobile compatibility need measured verification. The current workspace-wide transaction lock prioritizes consistency for a small outreach team and should be benchmarked before scaling. In-app reminders are coordinator-triggered; a background scheduler and external notification channels are optional future work.
+This is an academic working prototype. The isolated backend integration checks pass. Production health and UI should be checked after each deployment. Response-time targets, increasing concurrency, backup restoration, uptime and Safari/Firefox/mobile compatibility need measured verification. The current workspace-wide transaction lock prioritizes consistency for a small outreach team and should be benchmarked before scaling. In-app reminders are coordinator-triggered; a background scheduler and external notification channels are optional future work.
 
 InstituteConnect · Team T005 · CS314 Software Development Laboratory · LNMIIT, Jaipur.
