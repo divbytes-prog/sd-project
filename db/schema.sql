@@ -52,7 +52,7 @@ BEGIN
  END IF;
  RETURN NEW;
 END $$;
-CREATE TRIGGER protect_capacity BEFORE INSERT OR UPDATE ON instituteconnect.registration_index
+CREATE OR REPLACE TRIGGER protect_capacity BEFORE INSERT OR UPDATE ON instituteconnect.registration_index
  FOR EACH ROW EXECUTE FUNCTION instituteconnect.check_registration_capacity();
 INSERT INTO instituteconnect.workspace(id,data) VALUES(true,
 '{"version":2,"users":[],"events":[],"institutions":[],"contacts":[],"registrations":[],"participation":[],"outcomes":[],"notifications":[],"audit":[],"settings":{"defaultCapacity":120,"defaultMode":"Offline"}}'::jsonb)

@@ -1,85 +1,62 @@
 # InstituteConnect
 
-A complete, interactive **academic prototype** of the Admissions and Outreach Management System described in Team T005's CS314 assignments, The LNM Institute of Information Technology, Jaipur.
+An outreach management website based on Team T005's CS314 assignment PDF: six roles, institutions and contacts, approval-based events, registrations, attendance, outcomes, notifications and reports.
+
+## Current release status
+
+The live site is https://sd-project-gules.vercel.app/. It currently runs the earlier browser-local prototype. This `backend/neon` revision adds managed authentication, verified email, a central Neon database and trusted server permissions. **The backend release is awaiting encrypted deployment configuration and real-database integration verification.** See [the full PDF coverage audit](docs/requirements.md) for all 51 functional and 20 non-functional requirements and remaining checks.
 
 ## Run locally
 
-Requires Node.js 20+ and a modern browser. No npm dependencies or API keys are required.
+Use Node.js 20.9+ and npm. Copy `.env.example` to `.env.local`, configure a dedicated development Neon database and Managed Neon Auth branch, and apply `db/schema.sql` with its owner connection. Create an unprivileged `ic_web` login role separately, then apply `db/runtime-grants.sql`. Never use production owner credentials as the application connection.
 
 ```bash
+npm ci
 npm test
-npm run build
-npx serve dist
+npm run dev
 ```
 
-Alternatively, after building, serve `dist/` with any static web server. Do not open `index.html` directly as a file; ES modules need HTTP(S).
+The app opens on port 4173. For a production build, run `npm run build`, then `npm start`. Credentials must remain in ignored local environment files or encrypted hosting configuration.
 
-## Explore the prototype
+## Accounts and roles
 
-Select one of the six demo accounts on the welcome screen. No password is required; this is explicitly simulated role selection, not secure authentication.
+Sign up with your own email and password, verify the email code, then sign in. New accounts receive the Student role. Only the verified email configured as `IC_OWNER_EMAIL` receives the initial Administrator role. Administrators can assign Coordinator, Approver, Institution contact, Management or Student roles and deactivate accounts. An institution contact must be linked to a valid institution. There is no client-side role selector.
 
-| Role | Main workflows |
-| --- | --- |
-| Outreach Coordinator | Event drafts, submission, publication, cancellation, institutions and contacts, registration lists, attendance, outcomes and reports |
-| Outreach Approver | Review proposals, approve/reject with comments, review decision history |
-| Prospective Student | Discover published events, search/filter, register, cancel, view confirmations and notifications |
-| Institution Contact | View institution-relevant events, register on behalf of the demo institution, inspect contacts and engagement history |
-| Administrator | Coordinator tools plus approval, user role/status management and audit log |
-| Institute Management | Aggregate dashboards and CSV reports |
+The shared workspace starts empty. Earlier fictional browser sample records are not imported automatically.
 
-### Suggested demonstration
+## Main workflows
 
-1. Enter as Coordinator. Create an event with a future date, valid registration period, venue, description and capacity. Save the draft and submit it for approval.
-2. Switch to Approver, open Approvals, and approve the proposal. Rejecting instead requires a reason; rejected proposals can be edited and resubmitted.
-3. Switch to Coordinator and publish the approved event.
-4. Switch to Student and register. A confirmation appears in Registrations and Notifications. Duplicate, capacity, date and eligibility checks run before confirmation.
-5. Switch to Coordinator and review the participant list. Send in-app reminders or cancel an event to notify affected participants.
-6. Use the seeded, completed **Engineering Outreach Workshop** for attendance and outcome recording. Reusing an event/participant/activity combination corrects attendance rather than duplicating it.
-7. Open Reports and export the event summary, or export the registration list. Open Administrator to test role management and inspect the audit log.
+1. A coordinator creates a draft, completes its information and submits it for review.
+2. An approver approves or rejects it with a reason. Rejected proposals can be corrected and resubmitted.
+3. The coordinator publishes the approved event. Students and relevant institution contacts can discover and register while registration is open.
+4. The server checks eligibility, duplicate registration and capacity in a database transaction. Registrations and recipient-specific notifications persist across devices.
+5. Coordinators can update published logistics, send in-app reminders, cancel events and inspect participant lists.
+6. After an event ends, coordinators record/correct attendance and record outcomes. Reporting roles export separate event, registration, participation and outcome CSVs.
+7. Administrators manage accounts, defaults and central audit records.
 
-## Working features
+## Architecture
 
-- Responsive dashboard, six role-specific workspaces and mobile navigation.
-- Complete event form: category, description, date/time, mode/venue, organizer, target institutions, registration dates, capacity, eligibility and instructions.
-- Draft → Pending → Approved → Published → Completed lifecycle, rejection/resubmission and cancellation.
-- Institution/contact creation and editing, designated primary contacts, search, relationships and engagement history.
-- Student/institution registrations, cancellation, duplicate prevention, capacity limits, registration period and eligibility validation.
-- Finished-event attendance recording/correction, scoped student participation history and event outcome records.
-- In-app registration, approval, published-event-update, reminder and cancellation notifications, with read/unread status.
-- Dynamic charts, dashboards, separate registration/event/participation/outcome CSVs and print-friendly reports.
-- Administrator role/status controls, event defaults, account profile maintenance and an audit trail.
-- Browser persistence and cross-tab refresh.
-- Static deployment configuration for Vercel, security response headers, escaped user content and CSV formula neutralization.
+- `app/`: Next.js page, managed authentication proxy, workspace API and health endpoint.
+- `app.mjs`, `styles.css`: responsive role-specific interface, forms and report downloads.
+- `model.mjs`: workflow/domain rules. Seed helpers are retained for deterministic tests and are not exposed to live users.
+- `lib/workspace-service.mjs`: action allowlist, server authorization, validated fields and role-based response projection.
+- `lib/workspace-repository.js`: transactions, request idempotency, role lookup, central storage and audit writes.
+- `db/schema.sql`: application schema, confirmed-registration uniqueness and database capacity enforcement.
+- `tests/`: 41 passing domain/service checks.
+- `scripts/verify-integration.mjs`: isolated real-auth/database tests, including competing users for one place and cross-device persistence.
 
-## Prototype boundaries
+All workspace requests require a current verified managed session. Mutations validate origin, content type and body size. Credentials remain server-only. The restricted database role cannot rewrite audit records. Database administrators retain normal privileged maintenance access.
 
-**This is a browser-local demonstration, not a production admissions system.** All records live in `localStorage` on the current browser/origin, while demo login uses `sessionStorage`. They persist across refreshes, but different devices and deployment domains do not share data. Clearing site storage resets the sample workspace. An administrator can export a JSON backup from Settings before clearing it. Sample dates are relative to the first visit.
+## Vercel deployment
 
-Demo roles and model permission checks illustrate the requirements; they are **not a security boundary**. Anyone with this static app can inspect its bundled fictional records and change their browser state. Do not enter real student records, passwords, or sensitive information. Real authentication, server-enforced authorization, a central transactional database, concurrent registration protection, background reminders and email/SMS delivery require a backend implementation. Notifications here are in-app; coordinators trigger reminders manually. Backup download is provided; importing backups is not implemented.
+Use the existing sd-project Vercel project connected to this repository. Configure framework Next.js, build command `npm run build`, install command `npm ci` and no static output directory. Set encrypted server environment variables from `.env.example` for each environment. Never expose them with a `NEXT_PUBLIC_` prefix.
 
-The PDF’s real authentication, central database, security and concurrent-user requirements remain incomplete. In-app notifications work; the PDF does not mandate external email/SMS or password recovery. See the complete [51-requirement coverage audit](docs/requirements.md) for implemented, simulated and incomplete items.
+Production must use a restricted runtime `DATABASE_URL`. `MIGRATION_DATABASE_URL` and `IC_RUN_INTEGRATION_TESTS` belong only in the isolated verification environment; they are not required or allowed in production runtime configuration. Enable the integration runner explicitly for that environment before promoting the tested commit.
 
-## Focused improvements after PDF audit
+Configure the deployed origin as a trusted domain on its Neon Auth branch. `APP_ORIGIN` must match the website's origin. Set `IC_OWNER_EMAIL` to the intended first administrator's email; verification is mandatory before owner bootstrap.
 
-Published event logistics can now change with in-app notifications to confirmed participants; approved audience/content/capacity remain fixed. Registration availability is shown explicitly. Students can inspect their own attendance. Coordinators can correct attendance directly and export dedicated participation/outcome reports. Institution primary contacts and administrator event defaults complete relevant PDF responsibilities. Attendance/outcome/completion actions wait until the scheduled event end. Existing browser records migrate without clearing registrations.
+## Operational limits
 
-## Architecture and verification
-
-- `model.mjs`: domain entities, workflow/role rules, deterministic seeded data and notifications.
-- `app.mjs`: interface rendering, forms, accessible dialogs, downloads and browser persistence.
-- `styles.css`: responsive design, dashboard and print styles.
-- `scripts/build.mjs`: reproducible, dependency-free static build to `dist/`.
-- `tests/workspace.test.mjs`: domain tests for lifecycle, permissions, dates, registration, capacity, cancellation, attendance, outcomes and account controls.
-- `docs/requirements.md`: requirement traceability and known limitations.
-
-Validation: `npm test` runs 31 tests. The create → submit → approve → publish → student registration workflow was also verified through the browser UI. Browser QA caught and fixed compatibility with preview environments where `crypto.randomUUID` is unavailable.
-
-## Deploy on Vercel
-
-Import `divbytes-prog/sd-project` into Vercel. The repository includes `vercel.json` with framework **Other**, build command `npm run build`, and output directory `dist`. No environment variables are needed. Use `main` as the production branch. The linked Vercel Git integration can deploy later commits automatically.
-
-## Project attribution
+This is an academic working prototype. Real backend integration, deployment and production smoke checks remain pending. Response-time targets, increasing concurrency, backup restoration, uptime and Safari/Firefox/mobile compatibility need measured verification. The current workspace-wide transaction lock prioritizes consistency for a small outreach team and should be benchmarked before scaling. In-app reminders are coordinator-triggered; a background scheduler and external notification channels are optional future work.
 
 InstituteConnect · Team T005 · CS314 Software Development Laboratory · LNMIIT, Jaipur.
-
-The implementation follows the supplied assignment document. All preloaded contact details and account emails are fictional demonstration data.
