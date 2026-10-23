@@ -19,7 +19,7 @@ export async function runIntegration(base){
   const owner=await account('owner'),a=await account('student-a'),b=await account('student-b');
   const unverified=await owner.jar.request('/api/workspace');assert.equal(unverified.data.code,'EMAIL_VERIFICATION_REQUIRED');passed('unverified email denied');
   // Only the isolated test branch receives verified fixture identities; no real inbox is bypassed.
-  await db.query('UPDATE neon_auth."user" SET "emailVerified"=true WHERE id=ANY($1::text[])',[[owner.uid,a.uid,b.uid]]);
+  await db.query('UPDATE neon_auth."user" SET "emailVerified"=true WHERE id::text=ANY($1::text[])',[[owner.uid,a.uid,b.uid]]);
   let r=await owner.jar.request('/api/workspace');assert.equal(r.response.status,200);assert.equal(r.data.state.users.find(u=>u.id===owner.uid).role,'Student');
   // The production owner bootstrap is separately constrained to the configured verified email.
   // Promote this fresh .test fixture through the isolated database to exercise all administrative APIs.
