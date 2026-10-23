@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {seed} from '../model.mjs';
+import {executeAction,projectState,authorizeAction} from '../lib/workspace-service.mjs';
+const setup=()=>seed(new Date('2026-10-23T12:00:00Z'));
+test('server rejects client-supplied role and event status injection',()=>{const d=setup();assert.throws(()=>executeAction(d,'U1','saveEvent',{values:{title:'Injected',capacity:1,status:'Published'}}),/Unexpected/);assert.throws(()=>executeAction(d,'U3','updateProfile',{values:{name:'A',level:'Class 12',role:'Administrator'}}),/Unexpected/)});
+test('server denies approval and configuration to students',()=>{const d=setup();assert.throws(()=>executeAction(d,'U3','transition',{id:'E4',action:'approve'}),/cannot/);assert.throws(()=>executeAction(d,'U3','updateConfiguration',{values:{defaultCapacity:1,defaultMode:'Online'}}),/cannot/)});
+test('student projection omits private contacts, peers and audits',()=>{const p=projectState(setup(),'U3');assert.equal(p.contacts.length,0);assert.equal(p.audit.length,0);assert.ok(!p.users.some(u=>u.id==='U4'));assert.ok(p.registrations.every(r=>r.userId==='U3'));assert.ok(p.events.every(e=>e.history.length===0));assert.ok(p.institutions.every(i=>Object.keys(i).every(k=>['id','name'].includes(k))))});
+test('institution contact sees only its institution contacts',()=>{const p=projectState(setup(),'U4');assert.ok(p.contacts.every(c=>c.institutionId==='I1'));assert.ok(p.events.every(e=>e.institutionIds.includes('I1')||!e.institutionIds.length))});
+test('projection exposes total event occupancy without exposing registrants',()=>{const d=setup();d.registrations.push({id:'Extra',eventId:'E1',userId:'U4',status:'Confirmed'});const p=projectState(d,'U3');assert.equal(p.events.find(e=>e.id==='E1').registrationCount,2);assert.equal(p.registrations.filter(r=>r.eventId==='E1').length,1)});
+test('management reports omit personal email and phone of other members',()=>{const p=projectState(setup(),'U6');assert.ok(p.users.filter(u=>u.id!=='U6').every(u=>!u.email&&!u.phone));assert.equal(p.contacts.length,0)});
+test('one user cannot mark another user notification as read',()=>{const d=setup();assert.throws(()=>executeAction(d,'U3','readNotification',{id:'N1'}),/not found/);assert.equal(d.notifications[0].read,false)});
+test('institution contact assignment requires an existing institution',()=>{const d=setup();assert.throws(()=>executeAction(d,'U5','updateUser',{id:'U3',values:{role:'Institution contact',status:'Active',institutionId:'missing'}}),/linked/)});
+test('server rejects unsupported commands and nested payloads',()=>{const d=setup();assert.throws(()=>executeAction(d,'U5','replaceDatabase',{values:d}),/Unknown/);assert.throws(()=>executeAction(d,'U1','saveInstitution',{values:{name:{evil:true}}}),/Invalid/)});
+test('cached mutation authorization still checks current role',()=>{const d=setup();assert.throws(()=>authorizeAction(d.users[2],'transition',{action:'approve'}),/cannot/);assert.throws(()=>authorizeAction(d.users[2],'transition',{action:'publish'}),/cannot/)});
