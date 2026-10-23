@@ -19,3 +19,13 @@ test('seeding twice is idempotent and preserves real and edited sample records',
  const once=mergeSampleData(original,sample),twice=mergeSampleData(once,sample);
  assert.deepEqual(twice,once);assert.deepEqual(once.users[0],real);assert.equal(once.events[0].title,'User edited sample title');assert.equal(once.settings.defaultCapacity,75);assert.equal(original.users.length,1);
 });
+
+test('professor dataset includes approval, waiting, full, cancelled and last-seat examples',()=>{
+ const data={...buildSampleData(now),notifications:[],audit:[]},s=new Workspace(data,()=>now);
+ for(const status of ['Draft','Pending','Approved','Rejected','Published','Completed','Cancelled'])assert.ok(data.events.some(e=>e.status===status));
+ assert.equal(s.registrationState('SAMPLE-E19'),'Opens soon');
+ assert.equal(s.registrationState('SAMPLE-E18'),'Cancelled');
+ assert.equal(s.event('SAMPLE-E20').capacity-s.count('SAMPLE-E20'),1);
+ for(const r of data.registrations.filter(r=>r.eventId==='SAMPLE-E18'))assert.equal(r.status,'Event cancelled');
+ assert.equal(new Set(data.registrations.filter(r=>r.status==='Confirmed').map(r=>r.eventId+':'+r.userId)).size,data.registrations.filter(r=>r.status==='Confirmed').length);
+});

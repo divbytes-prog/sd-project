@@ -1,4 +1,5 @@
 import {isoDate} from '../model.mjs';
+import {buildProfessorSamples} from './professor-samples.mjs';
 
 // These are workspace illustrations, never managed Auth accounts.
 export function buildSampleData(now = new Date()) {
@@ -49,7 +50,9 @@ export function buildSampleData(now = new Date()) {
     {id:'SAMPLE-P2',eventId:'SAMPLE-E8',userId:'SAMPLE-U-contact',institutionId:'SAMPLE-I1',activity:'Sample school counsellor briefing',status:'Present',date:`${day(-7)}T15:00:00+05:30`,sample:true},
   ];
   const outcomes=[{id:'SAMPLE-O1',eventId:'SAMPLE-E8',institutionsEngaged:1,leads:2,feedback:'Sample feedback: participants enjoyed the hands-on activities and asked about engineering programmes.',followUp:'Sample follow-up: share programme information and invite the school to a future visit.',date:stamp(-6),sample:true}];
-  return {users,institutions,contacts,events,registrations,participation,outcomes};
+  const base={users,institutions,contacts,events,registrations,participation,outcomes};
+  const extra=buildProfessorSamples(now);
+  return Object.fromEntries(Object.entries(base).map(([key,records])=>[key,[...records,...extra[key]]]));
 }
 
 export function mergeSampleData(data, sample) {
