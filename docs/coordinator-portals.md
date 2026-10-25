@@ -25,3 +25,9 @@ Attendance retains its existing post-event and confirmed-participant checks. Out
 All deployed access uses managed Neon Auth and the shared database. Missing configuration fails closed with a service error. The previously merged credential-free fallback is disabled; it cannot silently substitute for production authentication or persistence. The merged theme, profile and metadata improvements are retained.
 
 There is no background approval service: a pre-existing authorized reviewer/administrator must make an actual decision. The app does not simulate approval or grant coordinator status during signup. Mobile layouts and keyboard-labelled controls use the existing responsive style. Long-term availability, larger-load benchmarking and broader browser/device certification retain their previously documented limits.
+
+## Validation
+
+53 automated domain/service checks and 20 isolated real-auth/database checks pass. The live checks cover portal mismatch denial, coordinator draft/submission, explicit authorized review, approved publication, student registration, ownership scoping, last-seat concurrency, persistence, notifications and session revocation. The Next.js production build passes. No lint command is configured.
+
+The production role chooser, coordinator sign-in destination, Back action and student sign-in entry were checked in Chrome. Authenticated student/coordinator journeys were exercised through real API sessions, not through interactive browser credential entry. Additional mobile/device/browser certification remains unverified. The local preview daemon appends flags incompatible with Next.js, so browser entry checks used the deployed public site. Hosting preview protection remains enabled.
