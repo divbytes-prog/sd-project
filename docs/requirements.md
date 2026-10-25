@@ -4,7 +4,7 @@ Audit date: 23 October 2026 (India). Source: **T005_Assignment_4_Professional_zo
 
 ## Verdict
 
-The backend implements the missing shared database, managed credential authentication, verified email, server authorization, data scoping, protected audit records and transactional registration protection. It passed 45 domain/service tests and 16 real database/authentication checks in an isolated Neon verification branch on 23 October 2026. Production deployment uses a separate branch/database and restricted runtime credentials.
+The backend implements the missing shared database, managed credential authentication, verified email, server authorization, data scoping, protected audit records and transactional registration protection. It passed 53 domain/service tests and 20 real database/authentication checks in an isolated Neon verification branch on 23 October 2026. Production deployment uses a separate branch/database and restricted runtime credentials.
 
 All 51 functional requirements have an implementation path. The operational and cross-browser limits below remain explicit: this is a tested academic prototype, not a claim of a measured production SLA.
 
@@ -27,9 +27,9 @@ All 51 functional requirements have an implementation path. The operational and 
 | FR-013 | Outreach Event Information | Implemented | Title, description, category, date, time, mode/venue, organizer, target institutions, registration period, capacity, eligibility and instructions. |
 | FR-014 | Save Event Draft | Implemented | Incomplete events can be saved before submission. |
 | FR-015 | Edit Event | Implemented | Draft/rejected records editable; published schedule/venue/instructions can be updated by organizer/admin. Approved audience/content/capacity remain fixed. |
-| FR-016 | Submit Event | Implemented | Required fields, registration period, dates and times checked before entering Pending. |
+| FR-016 | Submit Event | Implemented | Required fields, registration period, dates and times checked before entering Submitted (stored as Pending). |
 | FR-017 | Approve Event | Implemented | Approver/admin decision with reviewer and decision date. |
-| FR-018 | Reject Event | Implemented | Approver/admin rejection from Pending. |
+| FR-018 | Reject Event | Implemented | Approver/admin rejection from Submitted or Under Review. |
 | FR-019 | Rejection Reason | Implemented | Blank rejection reasons rejected; history is retained on resubmission. |
 | FR-020 | Publish Event | Implemented | Organizer/admin publication requires Approved status. |
 | FR-021 | Cancel Event | Implemented | Organizer/admin cancellation closes registration and notifies confirmed participants in-app. |
@@ -114,7 +114,7 @@ All ten are demonstrated in domain tests: authorized creation, approval before p
 | Event — ActivityParticipation | Event/user/institution links, named activity, attendance and timestamp. |
 | Event — Outcome | Event-linked outcome entries with engagement metrics and follow-up. |
 
-The UI uses **Pending** for the document's Submitted/Under Review stages, and **Rejected** for revision. This collapses intermediate review states; it does not implement reviewer assignment or a separate review-start action. Registration Open/Closed are derived from dates, event status, start time and capacity. Completed events can record outcomes/reports; a new draft starts the next outreach cycle.
+The UI displays **Submitted** for the backward-compatible stored Pending status. **Under Review** is an explicit state entered by an authorized reviewer; coordinators cannot start review or decide approval. Rejected proposals can be revised and resubmitted. Registration availability remains derived from dates, event status, start time and capacity. Reviewer assignment is not automated.
 
 The core scenarios UC-004 (create event), UC-006 (approve/reject) and UC-011 (registration) can be demonstrated end-to-end. Their authentication precondition now uses managed, verified server sessions; the core authenticated create/review/publish/register flow passes isolated integration verification.
 
@@ -135,7 +135,7 @@ The shared database includes clearly labelled fictional defaults added through a
 
 Encrypted variables are configured on the existing sd-project Vercel project. Preview verification uses its own Neon branch, database and managed Auth endpoint. Production uses the restricted runtime role and does not receive the migration connection or the integration-test flag. The initial administrator must sign up and verify the configured owner email; other accounts start as Student and receive elevated roles only through an administrator.
 
-Sixteen isolated live checks pass: database health, unauthenticated denial, email verification enforcement, role restoration, role escalation denial, approval lifecycle, last-place concurrency, duplicate denial, cross-device persistence/privacy, ownership protection, update notifications, idempotency, cross-origin denial, logout revocation, central audit and audit write protection.
+Twenty isolated live checks pass: database health, unauthenticated denial, email verification enforcement, role restoration, role escalation denial, approval lifecycle, last-place concurrency, duplicate denial, cross-device persistence/privacy, ownership protection, update notifications, idempotency, cross-origin denial, logout revocation, central audit and audit write protection.
 
 Remaining operational validation: define and measure a representative response-time/concurrency workload, exercise backup restoration, observe availability over time and test Safari/Firefox and real mobile devices. These are not grounds for claiming complete production certification today. The conservative shared workspace write lock requires benchmarking before a larger deployment.
 
@@ -147,8 +147,8 @@ Payment processing, admissions/exams, ERP, housing, transport, native mobile app
 
 ## Verification
 
-- 45 automated domain/service tests pass, including allowed/denied actions, lifecycle rules, payload injection and role-based data projection.
+- 53 automated domain/service tests pass, including allowed/denied actions, lifecycle rules, payload injection and role-based data projection.
 - Next.js production compilation passes locally.
-- A real-database integration runner is included in scripts/verify-integration.mjs and scripts/verify-build.mjs. It runs only when explicitly enabled against the isolated verification database. All 16 checks passed against the isolated verification database and managed Auth branch.
+- A real-database integration runner is included in scripts/verify-integration.mjs and scripts/verify-build.mjs. It runs only when explicitly enabled against the isolated verification database. All 20 checks passed against the isolated verification database and managed Auth branch.
 - Previous browser tests apply to the earlier prototype, not proof of the new backend's live behavior.
 - No load, uptime, restore or cross-browser certification is claimed.
