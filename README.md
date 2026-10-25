@@ -4,7 +4,7 @@ An outreach management website based on Team T005's CS314 assignment PDF: six ro
 
 ## Current release status
 
-The website uses managed authentication, verified email, a central Neon database and trusted server permissions. The backend passed 53 domain/service tests and 20 isolated real-database/authentication checks, including last-seat concurrency, cross-device persistence, session revocation and audit permissions. See [the full PDF coverage audit](docs/requirements.md) for all 51 functional and 20 non-functional requirements and the limits of this verification.
+The website uses managed authentication, verified email, a central Neon database and trusted server permissions. The backend passed 64 domain/service tests and 20 isolated real-database/authentication checks, including last-seat concurrency, cross-device persistence, session revocation and audit permissions. See [the full PDF coverage audit](docs/requirements.md) for all 51 functional and 20 non-functional requirements and the limits of this verification.
 
 ## Run locally
 
@@ -20,7 +20,7 @@ The app opens on port 4173. For a production build, run `npm run build`, then `n
 
 ## Accounts and roles
 
-Sign up with your own email and password, verify the email code, then sign in. New accounts receive the Student role. Only the verified email configured as `IC_OWNER_EMAIL` receives the initial Administrator role. Administrators can assign Coordinator, Approver, Institution contact, Management or Student roles and deactivate accounts. An institution contact must be linked to a valid institution. The entry screen offers Student and Outreach Coordinator portals. Choosing a portal never assigns a role; the server checks the current account role. Staff accounts must be assigned by an administrator. See [coordinator portal details](docs/coordinator-portals.md).
+Sign up with your own email and password, verify the email code, then sign in. New accounts receive the Student role. Only the verified email configured as `IC_OWNER_EMAIL` receives the initial Administrator role. Administrators can assign Coordinator, Approver, Institution contact, Management or Student roles and deactivate accounts. An institution contact must be linked to a valid institution. The entry screen offers Student, Outreach Coordinator and Approver portals. Choosing a portal never assigns a role; the server checks the current account role. Staff accounts must be assigned by an administrator. See [coordinator portal details](docs/coordinator-portals.md).
 
 The shared workspace includes clearly labelled fictional sample records: 12 institutions, 16 contacts, 20 events across the approval lifecycle, 79 registrations, 52 attendance entries and 6 outcomes. Upcoming sample events include open registrations and a full small-group session. Twenty-three inactive sample identities support historical reports; they have no managed Auth accounts or passwords. Real accounts and records are preserved.
 
@@ -28,12 +28,14 @@ The shared workspace includes clearly labelled fictional sample records: 12 inst
 
 For a guided presentation, see [the professor walkthrough](docs/professor-walkthrough.md).
 
+For registration approval setup and deployment, see [the Approver portal guide](docs/approver-portal.md).
+
 ## Main workflows
 
 1. A coordinator creates a draft, completes its information and submits it for review.
 2. An approver approves or rejects it with a reason. Rejected proposals can be corrected and resubmitted.
-3. The coordinator publishes the approved event. Students and relevant institution contacts can discover and register while registration is open.
-4. The server checks eligibility, duplicate registration and capacity in a database transaction. Registrations and recipient-specific notifications persist across devices.
+3. The coordinator publishes the approved event. Students and relevant institution contacts can submit participation requests while registration is open. An authorized Approver or Administrator accepts or rejects each Pending request.
+4. The server checks eligibility and duplicate requests at submission, and checks capacity again during approval in a database transaction. Existing confirmed places remain approved. Registrations and recipient-specific notifications persist across devices.
 5. Coordinators can update published logistics, send in-app reminders, cancel events and inspect participant lists.
 6. After an event ends, coordinators record/correct attendance and record outcomes. Reporting roles export separate event, registration, participation and outcome CSVs.
 7. Administrators manage accounts, defaults and central audit records.
@@ -46,7 +48,7 @@ For a guided presentation, see [the professor walkthrough](docs/professor-walkth
 - `lib/workspace-service.mjs`: action allowlist, server authorization, validated fields and role-based response projection.
 - `lib/workspace-repository.js`: transactions, request idempotency, role lookup, central storage and audit writes.
 - `db/schema.sql`: application schema, confirmed-registration uniqueness and database capacity enforcement.
-- `tests/`: 53 passing domain/service checks.
+- `tests/`: 64 passing domain/service checks.
 - `scripts/verify-integration.mjs`: isolated real-auth/database tests, including competing users for one place and cross-device persistence.
 
 All workspace requests require a current verified managed session. Mutations validate origin, content type and body size. Credentials remain server-only. The restricted database role cannot rewrite audit records. Database administrators retain normal privileged maintenance access.

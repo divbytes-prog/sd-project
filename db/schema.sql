@@ -22,7 +22,10 @@ CREATE TABLE IF NOT EXISTS instituteconnect.registration_index (
  event_id text NOT NULL REFERENCES instituteconnect.event_index(id),
  user_id text NOT NULL,
  status text NOT NULL,
- recorded_at timestamptz NOT NULL
+ recorded_at timestamptz NOT NULL,
+ reviewed_by text,
+ reviewed_at timestamptz,
+ rejection_reason text
 );
 CREATE UNIQUE INDEX IF NOT EXISTS one_confirmed_registration
  ON instituteconnect.registration_index(event_id,user_id) WHERE status='Confirmed';
@@ -44,10 +47,10 @@ CREATE OR REPLACE FUNCTION instituteconnect.check_registration_capacity() RETURN
 LANGUAGE plpgsql AS $$
 DECLARE allowed integer; occupied integer;
 BEGIN
- IF NEW.status='Confirmed' THEN
+ IF NEW.status IN ('Approved','Confirmed') THEN
   SELECT capacity INTO allowed FROM instituteconnect.event_index WHERE id=NEW.event_id FOR UPDATE;
   SELECT count(*) INTO occupied FROM instituteconnect.registration_index
-   WHERE event_id=NEW.event_id AND status='Confirmed' AND id<>NEW.id;
+   WHERE event_id=NEW.event_id AND status IN ('Approved','Confirmed') AND id<>NEW.id;
   IF occupied>=allowed THEN RAISE EXCEPTION 'Event capacity reached' USING ERRCODE='23514'; END IF;
  END IF;
  RETURN NEW;
@@ -57,3 +60,6 @@ CREATE OR REPLACE TRIGGER protect_capacity BEFORE INSERT OR UPDATE ON institutec
 INSERT INTO instituteconnect.workspace(id,data) VALUES(true,
 '{"version":2,"users":[],"events":[],"institutions":[],"contacts":[],"registrations":[],"participation":[],"outcomes":[],"notifications":[],"audit":[],"settings":{"defaultCapacity":120,"defaultMode":"Offline"}}'::jsonb)
 ON CONFLICT(id) DO NOTHING;
+
+-- Upgrade existing installations using db/migrations/002-registration-approvals.sql.
+CREATE UNIQUE INDEX IF NOT EXISTS one_active_registration_request ON instituteconnect.registration_index(event_id,user_id) WHERE status IN ('Pending','Approved','Confirmed');
