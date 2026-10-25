@@ -8,7 +8,7 @@ async function handle(request,write=false){const requestId=randomUUID(),start=Da
  const {data:session}=await auth.getSession({query:{disableCookieCache:"true"}});
  if(!session?.user)throw new ServiceError('Please sign in to continue.',401,'UNAUTHENTICATED');
  let operation=null;if(write){const text=await request.text();if(text.length>65536)throw new ServiceError('Request too large.',413);operation=JSON.parse(text);if(!operation||typeof operation.action!=='string'||!operation.args||typeof operation.args!=='object'||Array.isArray(operation.args))throw new ServiceError('Invalid workspace request.')}
- const result=await workspaceRequest(session.user,operation);
+ const result=await workspaceRequest(session.user,operation,request.headers.get('x-institute-portal'));
  console.info(JSON.stringify({event:'workspace_request',requestId,method:write?'POST':'GET',ms:Date.now()-start,status:200}));
  return Response.json(result,{headers:{'Cache-Control':'private, no-store','X-Request-Id':requestId}});
  }catch(error){const known=error instanceof ServiceError;const validation=error.constructor===Error;const status=known?error.status:error instanceof SyntaxError?400:validation?400:503;

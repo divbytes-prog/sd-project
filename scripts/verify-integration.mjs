@@ -9,17 +9,17 @@ export async function runIntegration(base){
  function passed(name){checks.push(name);console.log('PASS:',name)}
  class Account{
   constructor(){this.cookies=new Map()}
-  async request(path,body){const response=await fetch(base+path,{method:body?'POST':'GET',headers:{Origin:base,...(body?{'Content-Type':'application/json'}:{}),Cookie:[...this.cookies].map(([k,v])=>k+'='+v).join('; ')},body:body?JSON.stringify(body):undefined});for(const c of response.headers.getSetCookie()){const [pair]=c.split(';'),i=pair.indexOf('=');this.cookies.set(pair.slice(0,i),pair.slice(i+1))}const data=await response.json();return {response,data}}
+  async request(path,body){const response=await fetch(base+path,{method:body?'POST':'GET',headers:{Origin:base,...(this.portal?{'X-Institute-Portal':this.portal}:{}),...(body?{'Content-Type':'application/json'}:{}),Cookie:[...this.cookies].map(([k,v])=>k+'='+v).join('; ')},body:body?JSON.stringify(body):undefined});for(const c of response.headers.getSetCookie()){const [pair]=c.split(';'),i=pair.indexOf('=');this.cookies.set(pair.slice(0,i),pair.slice(i+1))}const data=await response.json();return {response,data}}
   async mutate(action,args,requestId=randomUUID()){return this.request('/api/workspace',{action,args,requestId})}
  }
  async function account(label){const jar=new Account(),email=`${label}-${stamp}@instituteconnect.test`,password=randomBytes(24).toString('base64url');const result=await jar.request('/api/auth/sign-up/email',{email,password,name:'Verification '+label});assert.equal(result.response.status,200,'Managed sign-up must succeed');const uid=result.data.user?.id;assert.ok(uid,'Signup must return a user');return {jar,email,password,uid}}
  try{
   const health=await fetch(base+'/api/health');assert.equal(health.status,200);passed('shared database health');
   const anon=await new Account().request('/api/workspace');assert.equal(anon.response.status,401);passed('unauthenticated API access denied');
-  const owner=await account('owner'),a=await account('student-a'),b=await account('student-b');
+  const owner=await account('owner'),a=await account('student-a'),b=await account('student-b'),coordinator=await account('coordinator');
   const unverified=await owner.jar.request('/api/workspace');assert.equal(unverified.data.code,'EMAIL_VERIFICATION_REQUIRED');passed('unverified email denied');
   // Only the isolated test branch receives verified fixture identities; no real inbox is bypassed.
-  await db.query('UPDATE neon_auth."user" SET "emailVerified"=true WHERE id::text=ANY($1::text[])',[[owner.uid,a.uid,b.uid]]);
+  await db.query('UPDATE neon_auth."user" SET "emailVerified"=true WHERE id::text=ANY($1::text[])',[[owner.uid,a.uid,b.uid,coordinator.uid]]);
   let r=await owner.jar.request('/api/workspace');assert.equal(r.response.status,200);assert.equal(r.data.state.users.find(u=>u.id===owner.uid).role,'Student');
   // The production owner bootstrap is separately constrained to the configured verified email.
   // Promote this fresh .test fixture through the isolated database to exercise all administrative APIs.
@@ -34,6 +34,24 @@ export async function runIntegration(base){
   const early=await owner.jar.mutate('transition',{id:eid,action:'publish'});assert.equal(early.response.status,400);
   for(const action of ['submit','approve','publish'])assert.equal((await owner.jar.mutate('transition',{id:eid,action})).response.status,200);
   passed('server-enforced event approval lifecycle');
+  await coordinator.jar.request('/api/workspace');
+  assert.equal((await owner.jar.mutate('updateUser',{id:coordinator.uid,values:{role:'Coordinator',status:'Active',institutionId:''}})).response.status,200);
+  owner.jar.portal='Coordinator';a.jar.portal='Student';b.jar.portal='Student';coordinator.jar.portal='Coordinator';
+  const mismatch=new Account();mismatch.cookies=new Map(a.jar.cookies);mismatch.portal='Coordinator';assert.equal((await mismatch.request('/api/workspace')).data.code,'PORTAL_MISMATCH');passed('student portal selection cannot grant coordinator access');
+  const incomplete=await coordinator.jar.mutate('saveEvent',{values:{title:'Coordinator draft '+stamp,capacity:3},submit:false});assert.equal(incomplete.response.status,200);const cid=incomplete.data.result.id;
+  assert.equal((await coordinator.jar.mutate('transition',{id:cid,action:'publish'})).response.status,400);
+  assert.equal((await a.jar.mutate('register',{id:cid})).response.status,400);
+  const submitted=await coordinator.jar.mutate('saveEvent',{id:cid,values:{...values,title:'Coordinator workshop '+stamp,capacity:3,contactIds:[]},submit:true});assert.equal(submitted.response.status,200);assert.equal(submitted.data.result.status,'Pending');passed('coordinator saves a draft and submits a complete proposal without publishing');
+  assert.equal((await coordinator.jar.mutate('transition',{id:cid,action:'approve'})).response.status,403);
+  assert.equal((await coordinator.jar.mutate('transition',{id:cid,action:'startReview'})).response.status,403);
+  assert.equal((await owner.jar.mutate('transition',{id:cid,action:'startReview'})).response.status,200);
+  const reviewing=(await coordinator.jar.request('/api/workspace')).data.state.events.find(e=>e.id===cid);assert.equal(reviewing.status,'Under Review');
+  assert.equal((await owner.jar.mutate('transition',{id:cid,action:'approve'})).response.status,200);
+  assert.equal((await coordinator.jar.mutate('transition',{id:cid,action:'publish'})).response.status,200);
+  assert.equal((await a.jar.mutate('register',{id:cid})).response.status,200);passed('authorized reviewer approves before coordinator publication and student registration');
+  const own=(await coordinator.jar.request('/api/workspace')).data.state;assert.ok(own.events.every(e=>e.organizerId===coordinator.uid));assert.ok(own.registrations.every(r=>r.eventId===cid));assert.ok(!own.events.some(e=>e.id===eid));
+  assert.equal((await coordinator.jar.mutate('reminders',{id:eid})).response.status,403);passed('coordinator event and participant access is scoped on the server');
+
   const race=await Promise.all([a.jar.mutate('register',{id:eid}),b.jar.mutate('register',{id:eid})]);assert.equal(race.filter(r=>r.response.status===200).length,1);assert.equal(race.filter(r=>r.response.status===400).length,1);passed('two users competing for the last place cannot overbook');
   const winner=race[0].response.status===200?a:b,loser=winner===a?b:a;
   const duplicate=await winner.jar.mutate('register',{id:eid});assert.equal(duplicate.response.status,400);passed('duplicate registration denied');
