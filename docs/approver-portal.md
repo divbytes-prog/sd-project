@@ -46,3 +46,9 @@ Test the migration in the isolated verification branch first. Production credent
 ## Verification limits
 
 Authenticated browser credential entry and real-device/Safari/Firefox coverage require separate verification. The managed local preview launcher appends incompatible Next.js flags, so public entry UI checks use the deployed production site. Preview hosting protection is retained. No lint command is configured; use the available tests, syntax checks and Next.js production build. Large-workload benchmarking, availability observation and backup restoration retain the previously documented limits.
+
+## Tests performed
+
+- 64 automated domain/service tests passed, including pending submission, decision persistence, denied roles, stale decisions, capacity, legacy registrations, filtering/pagination, cancellation and attendance integration.
+- 26 live integration checks passed in the isolated Neon branch using real managed sessions. These include two approvers competing for one place and two reviewers racing conflicting decisions on the same request, student-visible approval/rejection, role restrictions, persistence, server pagination, idempotency and direct database uniqueness/capacity constraints.
+- Next.js production compilation and JavaScript syntax checks passed. No lint command is configured.

@@ -4,7 +4,7 @@ An outreach management website based on Team T005's CS314 assignment PDF: six ro
 
 ## Current release status
 
-The website uses managed authentication, verified email, a central Neon database and trusted server permissions. The backend passed 64 domain/service tests and 20 isolated real-database/authentication checks, including last-seat concurrency, cross-device persistence, session revocation and audit permissions. See [the full PDF coverage audit](docs/requirements.md) for all 51 functional and 20 non-functional requirements and the limits of this verification.
+The website uses managed authentication, verified email, a central Neon database and trusted server permissions. The backend passed 64 domain/service tests and 26 isolated real-database/authentication checks, including last-seat concurrency, cross-device persistence, session revocation and audit permissions. See [the full PDF coverage audit](docs/requirements.md) for all 51 functional and 20 non-functional requirements and the limits of this verification.
 
 ## Run locally
 

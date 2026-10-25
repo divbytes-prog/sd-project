@@ -4,9 +4,9 @@ The existing application is Next.js with a client-rendered workspace in app.mjs,
 
 ## Entry and access
 
-The first screen offers Prospective Student and Outreach Coordinator. The selection is retained as a non-sensitive session preference. A Back action changes it. It never assigns a role or bypasses email/password authentication or email verification. New accounts start as Student; an existing administrator assigns Coordinator access through Users. Do not share demonstration passwords.
+The entry now offers Prospective Student, Outreach Coordinator and the subsequently added Approver portal. The selection is retained as a non-sensitive session preference. A Back action changes it. It never assigns a role or bypasses email/password authentication or email verification. New accounts start as Student; an existing administrator assigns Coordinator access through Users. Do not share demonstration passwords.
 
-The Coordinator choice also serves the pre-existing Administrator, Approver and Management accounts. No additional public login choice or new reviewer role was introduced. Existing roles remain available to preserve the original PDF workflows. Only authorized reviewers can start or decide review; coordinators cannot approve their own proposals.
+The Coordinator choice also serves the pre-existing Administrator, Approver and Management accounts. The coordinator release retained the existing reviewer role. A later registration-review extension adds its dedicated Approver login choice; see docs/approver-portal.md. Existing roles remain available to preserve the original PDF workflows. Only authorized reviewers can start or decide review; coordinators cannot approve their own proposals.
 
 Requests carry the selected portal and the server checks it against the current assigned role. Current identity, account activity, event ownership and operation permissions are checked independently. Coordinator snapshots and exports include only their managed events, related registrations, participation and outcomes. Institutions and contacts remain the shared outreach directory.
 

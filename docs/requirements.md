@@ -4,7 +4,7 @@ Audit date: 23 October 2026 (India). Source: **T005_Assignment_4_Professional_zo
 
 ## Verdict
 
-The backend implements the missing shared database, managed credential authentication, verified email, server authorization, data scoping, protected audit records and transactional registration protection. It passed 53 domain/service tests and 20 real database/authentication checks in an isolated Neon verification branch on 23 October 2026. Production deployment uses a separate branch/database and restricted runtime credentials.
+The backend implements the missing shared database, managed credential authentication, verified email, server authorization, data scoping, protected audit records and transactional registration protection. It passed 64 domain/service tests and 26 real database/authentication checks in an isolated Neon verification branch on 23 October 2026. Production deployment uses a separate branch/database and restricted runtime credentials.
 
 All 51 functional requirements have an implementation path. The operational and cross-browser limits below remain explicit: this is a tested academic prototype, not a claim of a measured production SLA.
 
@@ -147,8 +147,12 @@ Payment processing, admissions/exams, ERP, housing, transport, native mobile app
 
 ## Verification
 
-- 53 automated domain/service tests pass, including allowed/denied actions, lifecycle rules, payload injection and role-based data projection.
+- 64 automated domain/service tests pass, including allowed/denied actions, lifecycle rules, payload injection and role-based data projection.
 - Next.js production compilation passes locally.
-- A real-database integration runner is included in scripts/verify-integration.mjs and scripts/verify-build.mjs. It runs only when explicitly enabled against the isolated verification database. All 20 checks passed against the isolated verification database and managed Auth branch.
+- A real-database integration runner is included in scripts/verify-integration.mjs and scripts/verify-build.mjs. It runs only when explicitly enabled against the isolated verification database. All 26 checks passed against the isolated verification database and managed Auth branch.
 - Previous browser tests apply to the earlier prototype, not proof of the new backend's live behavior.
 - No load, uptime, restore or cross-browser certification is claimed.
+
+## Registration review extension
+
+The Approver portal adds persistent Pending / Approved / Rejected participation requests. Existing Confirmed places remain approved. New submissions require an authorized Approver or Administrator decision, with capacity checked at approval; attendance and approved-participant counts exclude pending/rejected requests. See docs/approver-portal.md for migration, API, provisioning and validation details.
