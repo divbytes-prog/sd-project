@@ -83,6 +83,29 @@ a {
   flex-direction: column;
   padding: 32px 20px;
   z-index: 20;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) var(--border);
+}
+.sidebar > * {
+  flex-shrink: 0;
+}
+.sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+.sidebar::-webkit-scrollbar-track {
+  background: var(--border);
+}
+.sidebar::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  border-radius: 8px;
+  border: 2px solid var(--border);
+}
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: var(--purple);
 }
 .brand {
   display: flex;
