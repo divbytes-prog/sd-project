@@ -12,7 +12,7 @@ Requests carry the selected portal and the server checks it against the current 
 
 ## Coordinator workflow
 
-Dashboard summary cards, upcoming events, recent changes and awaiting-review proposals use current database records. The sidebar exposes event management, Create Event, institutions/contacts, registrations, participation, outcomes/reports and logout. Empty workspaces show explanatory states.
+Dashboard summary cards, upcoming events and awaiting-review proposals use current database records. The sidebar exposes event management, Create Event, institutions/contacts, registrations, participation, outcomes/reports and logout. Empty workspaces show explanatory states.
 
 The existing event dialog adds linked contact selection, Other category, Save as Draft and Submit for Approval. Submission validates and persists atomically: an invalid proposal does not leave a partially created event. Existing field values remain in the dialog after an error. Drafts require a title and positive capacity; other fields can remain incomplete. Only valid proposals enter Submitted (the stored Pending status). Existing Pending records remain compatible; Under Review is now an explicit state begun by an authorized reviewer. Rejection comments remain visible, and only approved events can be published.
 
