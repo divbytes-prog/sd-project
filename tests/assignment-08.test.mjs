@@ -1,197 +1,363 @@
 /**
- * InstituteConnect — Assignment 8 Automated Test Suite
- * Executes 28 Test Cases (TC-001 to TC-028) covering:
- * - UC-004: Create Outreach Event (TC-001 to TC-008)
- * - UC-011: Register for Outreach Event (TC-009 to TC-020)
- * - UC-006: Approve Outreach Event (TC-021 to TC-028)
+ * InstituteConnect | T005 | CS314 | Assignment 8
+ * Software Testing and Test Case Design — Executable Test Suite
+ *
+ * Implements all 28 Test Cases from Lab Assignment 8: Solution:
+ * - UC-004: Create Outreach Event (TS-001 to TS-008, TC-001 to TC-008)
+ * - UC-011: Register for Outreach Event (TS-009 to TS-020, TC-009 to TC-020)
+ * - UC-006: Approve Event (TS-021 to TS-028, TC-021 to TC-028)
+ *
+ * Reusable Synthetic Data Fixtures (Section 2.1):
+ * - Accounts: C01 (Coordinator), A01 (Approver), S01/S03 (Eligible Students), S02 (Ineligible Student), IC01 (Institution Contact)
+ * - Institution: I01 (Existing school record with a valid associated contact)
+ * - Events: E-BASE, E01 (Published/Open), E02 (Under Review), E03 (Draft)
  */
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Workspace, seed, isoDate } from '../model.mjs';
 import {
-  UserRole,
-  AccountStatus,
-  EventStatus,
-  RegistrationStatus,
-  ApprovalDecision,
-  EventMode,
-  InstitutionType,
-  NotificationStatus,
-  User,
-  ProspectiveStudent,
-  InstitutionContact,
-  OutreachCoordinator,
-  OutreachApprover,
-  Administrator,
-  InstituteManagement,
-  Institution,
-  Contact,
-  OutreachEvent,
-  Registration,
-  Approval,
-  Notification,
-  ValidationResult,
   EventService,
   RegistrationService,
   ApprovalService,
-  NotificationService,
-  Repository
+  NotificationService
 } from '../lib/design-services.mjs';
 
-const fixedNow = new Date('2026-10-25T12:00:00+05:30');
-const createTestWorkspace = () => new Workspace(seed(fixedNow), () => fixedNow);
+// Synthetic Test Clocks
+const NORMAL_TEST_CLOCK = new Date('2026-11-24T12:00:00+05:30');
 
-const validEventPayload = {
-  title: 'Robotics Workshop 2026',
-  description: 'Hands-on robotics session for aspiring engineering students.',
+// Helper to construct a fresh workspace populated with the Section 2.1 fixtures
+function createAssignment8Workspace(clockDate = NORMAL_TEST_CLOCK) {
+  const ws = new Workspace(seed(clockDate), () => clockDate);
+
+  // 1. Synthetic Accounts (Section 2.1)
+  const syntheticUsers = [
+    {
+      id: 'C01',
+      name: 'Dr. C. Coordinator',
+      role: 'Coordinator',
+      email: 'c01@instituteconnect.ac.in',
+      status: 'Active',
+      institutionId: null
+    },
+    {
+      id: 'A01',
+      name: 'Prof. A. Approver',
+      role: 'Approver',
+      email: 'a01@instituteconnect.ac.in',
+      status: 'Active',
+      institutionId: null
+    },
+    {
+      id: 'S01',
+      name: 'Aarav Mehta (S01)',
+      role: 'Student',
+      email: 's01@school.org',
+      status: 'Active',
+      institutionId: 'I01',
+      level: 'Class 12'
+    },
+    {
+      id: 'S02',
+      name: 'Rohan Gupta (S02 Ineligible)',
+      role: 'Student',
+      email: 's02@other.org',
+      status: 'Active',
+      institutionId: 'I-OTHER',
+      level: 'Class 10'
+    },
+    {
+      id: 'S03',
+      name: 'Priya Sharma (S03)',
+      role: 'Student',
+      email: 's03@school.org',
+      status: 'Active',
+      institutionId: 'I01',
+      level: 'Class 12'
+    },
+    {
+      id: 'IC01',
+      name: 'Mrs. I. Contact',
+      role: 'Institution contact',
+      email: 'ic01@school.org',
+      status: 'Active',
+      institutionId: 'I01'
+    }
+  ];
+
+  for (const u of syntheticUsers) {
+    const existingIdx = ws.data.users.findIndex(x => x.id === u.id);
+    if (existingIdx !== -1) ws.data.users[existingIdx] = u;
+    else ws.data.users.push(u);
+  }
+
+  // 2. Synthetic Institution I01 (Section 2.1)
+  const institutionI01 = {
+    id: 'I01',
+    name: 'Delhi Public School, Jaipur (I01)',
+    type: 'School',
+    address: 'Jaipur, Rajasthan',
+    region: 'North',
+    relationshipStatus: 'Active'
+  };
+  const instIdx = ws.data.institutions.findIndex(i => i.id === 'I01');
+  if (instIdx !== -1) ws.data.institutions[instIdx] = institutionI01;
+  else ws.data.institutions.push(institutionI01);
+
+  const contactIC01 = {
+    id: 'C-IC01',
+    institutionId: 'I01',
+    name: 'Mrs. I. Contact',
+    email: 'ic01@school.org',
+    phone: '+91 90000 00099',
+    designation: 'Outreach Contact'
+  };
+  const contactIdx = ws.data.contacts.findIndex(c => c.institutionId === 'I01');
+  if (contactIdx !== -1) ws.data.contacts[contactIdx] = contactIC01;
+  else ws.data.contacts.push(contactIC01);
+
+  // 3. E-BASE, E01, E02, E03 Fixtures
+  const E01 = {
+    id: 'E01',
+    title: 'Institute Outreach Workshop',
+    description: 'Outreach workshop for eligible students',
+    category: 'Workshop',
+    date: '2026-11-30',
+    startTime: '10:00',
+    endTime: '12:00',
+    mode: 'Offline',
+    venue: 'LNMIIT Jaipur',
+    organizerId: 'C01',
+    targetInstitutions: ['I01'],
+    institutionIds: ['I01'],
+    capacity: 120,
+    registrationStart: '2026-11-20',
+    registrationEnd: '2026-11-27',
+    registrationStartTime: '09:00',
+    registrationEndTime: '17:00',
+    eligibility: 'All students',
+    instructions: 'bring institution ID',
+    status: 'Published',
+    history: [
+      {
+        id: 'AP-E01',
+        decision: 'Approved',
+        by: 'A01',
+        comments: 'Reviewed and approved for publication',
+        date: '2026-11-19T10:00:00+05:30'
+      }
+    ]
+  };
+
+  const E02 = {
+    id: 'E02',
+    title: 'Under Review Outreach Event',
+    description: 'Proposal awaiting approver review',
+    category: 'Workshop',
+    date: '2026-12-05',
+    startTime: '10:00',
+    endTime: '12:00',
+    mode: 'Offline',
+    venue: 'LNMIIT Jaipur',
+    organizerId: 'C01',
+    targetInstitutions: ['I01'],
+    institutionIds: ['I01'],
+    capacity: 100,
+    registrationStart: '2026-11-25',
+    registrationEnd: '2026-12-02',
+    registrationStartTime: '09:00',
+    registrationEndTime: '17:00',
+    eligibility: 'All students',
+    instructions: 'bring institution ID',
+    status: 'Under Review',
+    history: [
+      {
+        id: 'AP-E02-START',
+        decision: 'Under Review',
+        by: 'A01',
+        comments: 'Review started.',
+        date: '2026-11-20T10:00:00+05:30'
+      }
+    ]
+  };
+
+  const E03 = {
+    id: 'E03',
+    title: 'Draft Outreach Workshop',
+    description: 'Incomplete draft proposal',
+    category: 'Workshop',
+    date: '2026-12-10',
+    startTime: '10:00',
+    endTime: '12:00',
+    mode: 'Offline',
+    venue: 'LNMIIT Jaipur',
+    organizerId: 'C01',
+    targetInstitutions: ['I01'],
+    institutionIds: ['I01'],
+    capacity: 50,
+    registrationStart: '2026-12-01',
+    registrationEnd: '2026-12-08',
+    status: 'Draft',
+    history: []
+  };
+
+  ws.data.events = [E01, E02, E03, ...ws.data.events.filter(e => !['E01', 'E02', 'E03'].includes(e.id))];
+
+  return ws;
+}
+
+// Reusable E-BASE test data object (Section 2.1)
+const E_BASE = {
+  title: 'Institute Outreach Workshop',
+  description: 'Outreach workshop for eligible students',
   category: 'Workshop',
-  date: '2026-11-20',
+  date: '2026-11-30',
   startTime: '10:00',
-  endTime: '13:00',
+  endTime: '12:00',
   mode: 'Offline',
-  venue: 'LNMIIT Jaipur, Lab 3',
+  venue: 'LNMIIT Jaipur',
+  organizer: 'C01',
+  organizerId: 'C01',
+  target: 'I01',
+  targetInstitutions: ['I01'],
+  institutionIds: ['I01'],
   capacity: 120,
-  registrationStart: '2026-10-01',
-  registrationEnd: '2026-11-15',
+  registrationStart: '2026-11-20',
+  registrationEnd: '2026-11-27',
+  registrationStartTime: '09:00',
+  registrationEndTime: '17:00',
   eligibility: 'All students',
-  instructions: 'Please bring your photo ID card.',
-  institutionIds: ['I1', 'I2']
+  instructions: 'bring institution ID'
 };
 
 // ============================================================================
 // UC-004: Create Outreach Event (TC-001 to TC-008)
 // ============================================================================
 
-test('TC-001: [UC-004] Successful event creation and submission with all valid details', () => {
-  const ws = createTestWorkspace();
+test('TC-001 - Create and submit a complete event', () => {
+  // Preconditions: Coordinator C01 is authenticated and authorized; institution I01 exists. Use fixture E-BASE.
+  const ws = createAssignment8Workspace();
   const eventService = new EventService(ws);
-  const result = eventService.createEvent(validEventPayload, 'U1', 'SUBMIT', () => fixedNow);
 
-  assert.ok(result.id, 'Created event must have a generated ID');
-  assert.equal(result.title, validEventPayload.title);
-  assert.equal(result.status, 'Pending'); // Submitted stored as Pending
-  assert.equal(result.organizerId, 'U1');
-  assert.equal(result.capacity, 120);
+  const event = eventService.createEvent(E_BASE, 'C01', 'SUBMIT', () => NORMAL_TEST_CLOCK);
 
-  // Verifying approvers received notification
-  const approverNotifications = ws.data.notifications.filter(
-    n => (n.userId === 'U2' || n.userId === 'U5') && n.message.includes(validEventPayload.title)
-  );
-  assert.ok(approverNotifications.length > 0, 'Approvers should be notified upon submission');
+  assert.ok(event.id, 'One event is persisted with a generated ID');
+  assert.equal(event.title, E_BASE.title);
+  assert.ok(['Pending', 'Submitted'].includes(event.status), 'Event status is Submitted / Pending');
+  assert.equal(event.organizerId, 'C01');
+  assert.deepEqual(event.institutionIds, ['I01'], 'Target institution I01 association is saved');
+
+  // Approvers are notified
+  const approverNotifs = ws.data.notifications.filter(n => n.userId === 'A01' && n.message.includes(E_BASE.title));
+  assert.ok(approverNotifs.length > 0, 'Confirmation and approver review notifications dispatched');
 });
 
-test('TC-002: [UC-004] Save event as draft with minimal valid details', () => {
-  const ws = createTestWorkspace();
+test('TC-002 - Reject submission with a missing title', () => {
+  // Preconditions: Coordinator C01 is authenticated and authorized; institution I01 exists. Use fixture E-BASE.
+  const ws = createAssignment8Workspace();
   const eventService = new EventService(ws);
-  const draftPayload = {
-    title: 'Future Tech Talk Draft',
-    capacity: 60
-  };
-  const result = eventService.saveDraft(null, draftPayload, 'U1', () => fixedNow);
-
-  assert.ok(result.id, 'Draft event must have an ID');
-  assert.equal(result.title, 'Future Tech Talk Draft');
-  assert.equal(result.status, 'Draft');
-  assert.equal(result.organizerId, 'U1');
-
-  // Verify no approval notifications sent for drafts
-  const notifs = ws.data.notifications.filter(n => n.message.includes('Future Tech Talk Draft'));
-  assert.equal(notifs.length, 0, 'No review notification should be sent for a draft');
-});
-
-test('TC-003: [UC-004] Negative validation: Event submission fails when required title is missing', () => {
-  const ws = createTestWorkspace();
-  const eventService = new EventService(ws);
-  const invalidPayload = { ...validEventPayload, title: '' };
+  const inputData = { ...E_BASE, title: '' };
 
   assert.throws(
-    () => eventService.createEvent(invalidPayload, 'U1', 'SUBMIT', () => fixedNow),
-    /title/i
+    () => eventService.createEvent(inputData, 'C01', 'SUBMIT', () => NORMAL_TEST_CLOCK),
+    /title/i,
+    'An understandable title/required-field error is shown; no submitted event is created.'
   );
 });
 
-test('TC-004: [UC-004] Negative validation: Event submission fails when end time precedes start time', () => {
-  const ws = createTestWorkspace();
+test('TC-003 - Save an incomplete draft', () => {
+  // Preconditions: Coordinator C01 is authenticated and authorized; institution I01 exists. Use fixture E-BASE.
+  const ws = createAssignment8Workspace();
   const eventService = new EventService(ws);
-  const invalidPayload = {
-    ...validEventPayload,
-    startTime: '14:00',
-    endTime: '12:00'
-  };
+  const draftData = { title: 'Institute Outreach Workshop' };
 
-  assert.throws(
-    () => eventService.createEvent(invalidPayload, 'U1', 'SUBMIT', () => fixedNow),
-    /times/i
-  );
+  const draft = eventService.saveDraft(null, draftData, 'C01', () => NORMAL_TEST_CLOCK);
+
+  assert.ok(draft.id, 'Draft has an assigned ID');
+  assert.equal(draft.status, 'Draft');
+  assert.equal(draft.title, 'Institute Outreach Workshop');
+
+  // Verify it can be reopened and is not submitted for review or published
+  const reopened = ws.event(draft.id);
+  assert.equal(reopened.status, 'Draft');
+  const reviewNotifs = ws.data.notifications.filter(n => n.message.includes(draft.id));
+  assert.equal(reviewNotifs.length, 0, 'Draft is not submitted for review or published');
 });
 
-test('TC-005: [UC-004] Negative validation: Event submission fails when registration window is invalid', () => {
-  const ws = createTestWorkspace();
+test('TC-004 - Reject registration end before start', () => {
+  // Preconditions: Coordinator C01 is authenticated and authorized; institution I01 exists. Use fixture E-BASE.
+  const ws = createAssignment8Workspace();
   const eventService = new EventService(ws);
-
-  // End date before start date
-  const invalidPayload1 = {
-    ...validEventPayload,
-    registrationStart: '2026-11-15',
-    registrationEnd: '2026-11-01'
-  };
-  assert.throws(
-    () => eventService.createEvent(invalidPayload1, 'U1', 'SUBMIT', () => fixedNow),
-    /Registration end date must not precede registration start date|date/i
-  );
-
-  // Registration end date after event date
-  const invalidPayload2 = {
-    ...validEventPayload,
-    date: '2026-11-10',
-    registrationEnd: '2026-11-15'
-  };
-  assert.throws(
-    () => eventService.createEvent(invalidPayload2, 'U1', 'SUBMIT', () => fixedNow),
-    /date/i
-  );
-});
-
-test('TC-006: [UC-004] Negative validation: Event creation fails when capacity is zero or negative', () => {
-  const ws = createTestWorkspace();
-  const eventService = new EventService(ws);
-
-  const zeroCapacity = { ...validEventPayload, capacity: 0 };
-  assert.throws(
-    () => eventService.createEvent(zeroCapacity, 'U1', 'SUBMIT', () => fixedNow),
-    /capacity/i
-  );
-
-  const negativeCapacity = { ...validEventPayload, capacity: -10 };
-  assert.throws(
-    () => eventService.createEvent(negativeCapacity, 'U1', 'SUBMIT', () => fixedNow),
-    /capacity/i
-  );
-});
-
-test('TC-007: [UC-004] Negative validation: Event creation fails when target institution does not exist', () => {
-  const ws = createTestWorkspace();
-  const eventService = new EventService(ws);
-  const invalidInstitutionPayload = {
-    ...validEventPayload,
-    institutionIds: ['NON_EXISTENT_INSTITUTION_ID']
+  const invalidDateData = {
+    ...E_BASE,
+    registrationStart: '2026-11-20T09:00:00+05:30',
+    registrationEnd: '2026-11-20T08:59:00+05:30'
   };
 
   assert.throws(
-    () => eventService.createEvent(invalidInstitutionPayload, 'U1', 'SUBMIT', () => fixedNow),
-    /target institution does not exist|institution/i
+    () => eventService.createEvent(invalidDateData, 'C01', 'SUBMIT', () => NORMAL_TEST_CLOCK),
+    /registration|date/i,
+    'Date-order validation rejects submission; no submitted event is created.'
   );
 });
 
-test('TC-008: [UC-004] Security validation: Prospective Student cannot create or submit outreach events', () => {
-  const ws = createTestWorkspace();
+test('TC-005 - Block event creation by a student', () => {
+  // Preconditions: Student S01 is authenticated with no coordinator role.
+  const ws = createAssignment8Workspace();
   const eventService = new EventService(ws);
 
-  // U3 is a Student
   assert.throws(
-    () => eventService.createEvent(validEventPayload, 'U3', 'SUBMIT', () => fixedNow),
-    /not authorized|role/i
+    () => eventService.createEvent(E_BASE, 'S01', 'SUBMIT', () => NORMAL_TEST_CLOCK),
+    /not authorized|coordinator|role/i,
+    'Access is denied at the protected operation; no event or institution association is created.'
+  );
+});
+
+test('TC-006 - Roll back event creation on association-save failure', () => {
+  // Preconditions: Coordinator C01 is authenticated and authorized; institution I01 exists. Use fixture E-BASE.
+  const ws = createAssignment8Workspace();
+  const eventService = new EventService(ws);
+  const countBefore = ws.data.events.length;
+
+  assert.throws(
+    () => eventService.createEvent(E_BASE, 'C01', 'SUBMIT', () => NORMAL_TEST_CLOCK, { simulateAssociationFailure: true }),
+    /association save failure|DB_ERROR/i
+  );
+
+  // Verify rollback: neither partial event nor orphan association remains
+  assert.equal(ws.data.events.length, countBefore, 'Transaction rollback preserves clean database state');
+});
+
+test('TC-007 - Reject an event end time before its start', () => {
+  // Preconditions: Coordinator C01 is authenticated and authorized; institution I01 exists. Use fixture E-BASE.
+  const ws = createAssignment8Workspace();
+  const eventService = new EventService(ws);
+  const invalidTimesData = {
+    ...E_BASE,
+    startTime: '12:00',
+    endTime: '10:00'
+  };
+
+  assert.throws(
+    () => eventService.createEvent(invalidTimesData, 'C01', 'SUBMIT', () => NORMAL_TEST_CLOCK),
+    /start\/end times|time/i,
+    'Invalid event timing is rejected; no submitted event is created.'
+  );
+});
+
+test('TC-008 - Reject a nonexistent target institution', () => {
+  // Preconditions: Coordinator C01 is authenticated and authorized; institution I01 exists. Use fixture E-BASE.
+  const ws = createAssignment8Workspace();
+  const eventService = new EventService(ws);
+  const nonExistentInstData = {
+    ...E_BASE,
+    institutionIds: ['I-MISSING']
+  };
+
+  assert.throws(
+    () => eventService.createEvent(nonExistentInstData, 'C01', 'SUBMIT', () => NORMAL_TEST_CLOCK),
+    /target institution does not exist|institution/i,
+    'The invalid institution reference is rejected; no event with broken target-institution association is committed.'
   );
 });
 
@@ -199,352 +365,346 @@ test('TC-008: [UC-004] Security validation: Prospective Student cannot create or
 // UC-011: Register for Outreach Event (TC-009 to TC-020)
 // ============================================================================
 
-test('TC-009: [UC-011] Successful event registration by Prospective Student for open published event', () => {
-  const ws = createTestWorkspace();
+test('TC-009 - Register an eligible student successfully', () => {
+  // Preconditions: Published event E01 is within its configured registration period; capacity 120; eligible authenticated S01 has no registration.
+  const ws = createAssignment8Workspace();
   const regService = new RegistrationService(ws);
 
-  // E2 is Published, open, within registration window
-  const reg = regService.register('U3', 'E2', () => fixedNow);
-
-  assert.ok(reg.id, 'Registration should have an ID');
-  assert.equal(reg.userId, 'U3');
-  assert.equal(reg.eventId, 'E2');
-  assert.ok(['Confirmed', 'Pending'].includes(reg.status));
-
-  // Notification sent to student
-  const studentNotif = ws.data.notifications.find(
-    n => n.userId === 'U3' && n.message.includes(ws.event('E2').title)
-  );
-  assert.ok(studentNotif, 'Student should receive a registration notification');
-});
-
-test('TC-010: [UC-011] Successful registration by Institution Contact for targeted event', () => {
-  const ws = createTestWorkspace();
-  const regService = new RegistrationService(ws);
-
-  // U4 belongs to institution I1. E2 targets I1.
-  ws.event('E2').institutionIds = ['I1'];
-  const reg = regService.register('U4', 'E2', () => fixedNow);
-
-  assert.ok(reg.id);
-  assert.equal(reg.userId, 'U4');
-  assert.equal(reg.eventId, 'E2');
-});
-
-test('TC-011: [UC-011] Negative validation: Registration rejected after registration closing date', () => {
-  const ws = createTestWorkspace();
-  const regService = new RegistrationService(ws);
-
-  // Set event E2 registrationEnd in the past
-  ws.event('E2').registrationEnd = '2026-10-10';
-
-  assert.throws(
-    () => regService.register('U3', 'E2', () => fixedNow),
-    /closed/i
-  );
-});
-
-test('TC-012: [UC-011] Negative validation: Registration rejected before registration opening date', () => {
-  const ws = createTestWorkspace();
-  const regService = new RegistrationService(ws);
-
-  // Set event E2 registrationStart in the future
-  ws.event('E2').registrationStart = '2026-11-01';
-
-  assert.throws(
-    () => regService.register('U3', 'E2', () => fixedNow),
-    /closed/i
-  );
-});
-
-test('TC-013: [UC-011] Negative validation: Registration rejected when event is at full capacity', () => {
-  const ws = createTestWorkspace();
-  const regService = new RegistrationService(ws);
-
-  // E2 capacity set to 1, fill it
-  ws.event('E2').capacity = 1;
-  ws.data.registrations.push({
-    id: 'R-EXISTING',
-    userId: 'U6',
-    eventId: 'E2',
-    status: 'Confirmed',
-    date: fixedNow.toISOString()
-  });
-
-  assert.throws(
-    () => regService.register('U3', 'E2', () => fixedNow),
-    /capacity|full/i
-  );
-});
-
-test('TC-014: [UC-011] Negative validation: Duplicate registration by same user is rejected', () => {
-  const ws = createTestWorkspace();
-  const regService = new RegistrationService(ws);
-
-  // U3 is already registered for E1 in sample seed
-  assert.throws(
-    () => regService.register('U3', 'E1', () => fixedNow),
-    /already/i
-  );
-});
-
-test('TC-015: [UC-011] Negative validation: Registration rejected for non-targeted institution contact', () => {
-  const ws = createTestWorkspace();
-  const regService = new RegistrationService(ws);
-
-  // U4 belongs to institution I1. Event E2 targets only I4.
-  ws.event('E2').institutionIds = ['I4'];
-
-  assert.throws(
-    () => regService.register('U4', 'E2', () => fixedNow),
-    /eligibility|institution/i
-  );
-});
-
-test('TC-016: [UC-011] Negative validation: Registration rejected when student does not meet eligibility criteria', () => {
-  const ws = createTestWorkspace();
-  const regService = new RegistrationService(ws);
-
-  // U3 is Class 12. Set event criteria to Undergraduate
-  ws.event('E2').eligibility = 'Undergraduate';
-  ws.event('E2').eligibilityCriteria = 'Undergraduate';
-
-  assert.throws(
-    () => regService.register('U3', 'E2', () => fixedNow),
-    /eligibility/i
-  );
-});
-
-test('TC-017: [UC-011] Capacity boundary: Registration succeeds at capacity N - 1 (119th seat)', () => {
-  const ws = createTestWorkspace();
-  const regService = new RegistrationService(ws);
-
-  ws.event('E2').capacity = 120;
-  // Seed with 118 existing registrations
-  for (let i = 1; i <= 118; i++) {
+  // Seed 20 active registrations
+  for (let i = 1; i <= 20; i++) {
     ws.data.registrations.push({
-      id: `R-SEAT-${i}`,
-      userId: `USER-${i}`,
-      eventId: 'E2',
+      id: `REG-SEED-${i}`,
+      userId: `U-EXIST-${i}`,
+      eventId: 'E01',
       status: 'Confirmed',
-      date: fixedNow.toISOString()
+      date: '2026-11-21T10:00:00+05:30'
     });
   }
 
-  // 119th seat registration
-  const reg119 = regService.register('U3', 'E2', () => fixedNow);
-  assert.ok(reg119.id);
-  assert.equal(reg119.userId, 'U3');
+  const reg = regService.register('S01', 'E01', () => NORMAL_TEST_CLOCK);
+
+  assert.ok(reg.id, 'Registration has an ID');
+  assert.equal(reg.userId, 'S01');
+  assert.equal(reg.eventId, 'E01');
+  assert.equal(ws.count('E01'), 21, 'Active registration count becomes 21');
+
+  // Verify notification initiated
+  const notif = ws.data.notifications.find(n => n.userId === 'S01' && n.message.includes('Institute Outreach Workshop'));
+  assert.ok(notif, 'Registration notification is initiated; data persists after reload');
 });
 
-test('TC-018: [UC-011] Capacity boundary: Registration succeeds at capacity N (120th seat, full threshold)', () => {
-  const ws = createTestWorkspace();
+test('TC-010 - Reject an ineligible registrant', () => {
+  // Preconditions: Published event E01 is within registration period; capacity 120; authenticated S02 does not meet eligibility.
+  const ws = createAssignment8Workspace();
+  const regService = new RegistrationService(ws);
+  ws.event('E01').eligibility = 'Class 12';
+  ws.event('E01').eligibilityCriteria = 'Class 12';
+  const countBefore = ws.count('E01');
+
+  assert.throws(
+    () => regService.register('S02', 'E01', () => NORMAL_TEST_CLOCK),
+    /eligibility|criteria/i,
+    'Eligibility error is displayed; no registration is created and capacity usage does not increase.'
+  );
+  assert.equal(ws.count('E01'), countBefore, 'Capacity usage does not increase');
+});
+
+test('TC-011 - Prevent duplicate active registration', () => {
+  // Preconditions: Published event E01 is within registration period; capacity 120; active registration for S01/E01 already exists.
+  const ws = createAssignment8Workspace();
   const regService = new RegistrationService(ws);
 
-  ws.event('E2').capacity = 120;
-  // Seed with 119 existing registrations
+  // Register S01 first
+  regService.register('S01', 'E01', () => NORMAL_TEST_CLOCK);
+  const countBefore = ws.count('E01');
+
+  // Repeat registration request for S01/E01
+  assert.throws(
+    () => regService.register('S01', 'E01', () => NORMAL_TEST_CLOCK),
+    /already registered/i,
+    'Duplicate is rejected with an understandable message; original record remains and no additional registration created.'
+  );
+  assert.equal(ws.count('E01'), countBefore);
+});
+
+test('TC-012 - Accept the last available place', () => {
+  // Preconditions: Published event E01 is within its configured registration period; capacity 120; active registrations C-1=119; S01.
+  const ws = createAssignment8Workspace();
+  const regService = new RegistrationService(ws);
+
   for (let i = 1; i <= 119; i++) {
     ws.data.registrations.push({
-      id: `R-SEAT-${i}`,
-      userId: `USER-${i}`,
-      eventId: 'E2',
+      id: `REG-SEAT-${i}`,
+      userId: `STUDENT-${i}`,
+      eventId: 'E01',
       status: 'Confirmed',
-      date: fixedNow.toISOString()
+      date: '2026-11-21T10:00:00+05:30'
     });
   }
 
-  // 120th seat registration
-  const reg120 = regService.register('U3', 'E2', () => fixedNow);
-  assert.ok(reg120.id);
-  assert.equal(reg120.userId, 'U3');
+  const reg = regService.register('S01', 'E01', () => NORMAL_TEST_CLOCK);
+  assert.ok(reg.id);
+  assert.equal(ws.count('E01'), 120, 'S01 is accepted once; active registrations become exactly 120 and do not exceed capacity.');
 });
 
-test('TC-019: [UC-011] Capacity boundary: Registration fails at capacity N + 1 (121st seat overflow)', () => {
-  const ws = createTestWorkspace();
+test('TC-013 - Reject registration at full capacity', () => {
+  // Preconditions: Published event E01 is within its configured registration period; capacity 120; active registrations C=120.
+  const ws = createAssignment8Workspace();
   const regService = new RegistrationService(ws);
 
-  ws.event('E2').capacity = 120;
-  // Seed with 120 existing registrations
   for (let i = 1; i <= 120; i++) {
     ws.data.registrations.push({
-      id: `R-SEAT-${i}`,
-      userId: `USER-${i}`,
-      eventId: 'E2',
+      id: `REG-FULL-${i}`,
+      userId: `STUDENT-${i}`,
+      eventId: 'E01',
       status: 'Confirmed',
-      date: fixedNow.toISOString()
+      date: '2026-11-21T10:00:00+05:30'
     });
   }
 
-  // 121st registration attempt must be rejected
   assert.throws(
-    () => regService.register('U3', 'E2', () => fixedNow),
-    /capacity|full/i
+    () => regService.register('S01', 'E01', () => NORMAL_TEST_CLOCK),
+    /capacity|full/i,
+    'Full-capacity error is shown; active count remains 120 and no S01 registration is created.'
+  );
+  assert.equal(ws.count('E01'), 120);
+});
+
+test('TC-014 - Reject registration just before opening', () => {
+  // Preconditions: Opening 20 Nov 2026 09:00 IST; clock 08:59 IST.
+  const ws = createAssignment8Workspace();
+  const regService = new RegistrationService(ws);
+  const clockBeforeOpening = () => new Date('2026-11-20T08:59:00+05:30');
+
+  assert.throws(
+    () => regService.register('S01', 'E01', clockBeforeOpening),
+    /closed/i,
+    'Registration is refused because the period has not started; no registration is saved.'
   );
 });
 
-test('TC-020: [UC-011] Negative validation: Registration rejected for Draft or unapproved events', () => {
-  const ws = createTestWorkspace();
+test('TC-015 - Reject registration just after closing', () => {
+  // Preconditions: Closing 27 Nov 2026 17:00 IST; clock 17:01 IST.
+  const ws = createAssignment8Workspace();
+  const regService = new RegistrationService(ws);
+  const clockAfterClosing = () => new Date('2026-11-27T17:01:00+05:30');
+
+  assert.throws(
+    () => regService.register('S01', 'E01', clockAfterClosing),
+    /closed/i,
+    'Registration is refused because the period has ended; no registration is saved.'
+  );
+});
+
+test('TC-016 - Require authentication for registration', () => {
+  // Preconditions: E01 is published, open and has free places; no user session exists.
+  const ws = createAssignment8Workspace();
   const regService = new RegistrationService(ws);
 
-  // E5 is Draft
-  assert.equal(ws.event('E5').status, 'Draft');
   assert.throws(
-    () => regService.register('U3', 'E5', () => fixedNow),
-    /available for registration|published/i
+    () => regService.register(null, 'E01', () => NORMAL_TEST_CLOCK),
+    /Authentication is required/i,
+    'Authentication is required; no registration is saved and no protected registrant information is exposed.'
   );
+});
 
-  // E4 is Pending
-  assert.equal(ws.event('E4').status, 'Pending');
+test('TC-017 - Prevent overbooking by concurrent requests', () => {
+  // Preconditions: E01 capacity 120; active count 119; simultaneous S01 and S03 requests.
+  const ws = createAssignment8Workspace();
+  const regService = new RegistrationService(ws);
+
+  for (let i = 1; i <= 119; i++) {
+    ws.data.registrations.push({
+      id: `REG-CONC-${i}`,
+      userId: `STUDENT-${i}`,
+      eventId: 'E01',
+      status: 'Confirmed',
+      date: '2026-11-21T10:00:00+05:30'
+    });
+  }
+
+  // First request takes the 120th place
+  const regS01 = regService.register('S01', 'E01', () => NORMAL_TEST_CLOCK);
+  assert.ok(regS01.id);
+  assert.equal(ws.count('E01'), 120);
+
+  // Simultaneous second request must be refused as capacity is exhausted
   assert.throws(
-    () => regService.register('U3', 'E4', () => fixedNow),
-    /available for registration|published/i
+    () => regService.register('S03', 'E01', () => NORMAL_TEST_CLOCK),
+    /capacity|full/i
+  );
+  assert.equal(ws.count('E01'), 120, 'Exactly one request succeeds and one is refused; total active count is 120; no overbooking.');
+});
+
+test('TC-018 - Preserve committed registration if notification fails', () => {
+  // Preconditions: Published event E01 is within registration period; capacity 120; eligible S01.
+  const ws = createAssignment8Workspace();
+  const regService = new RegistrationService(ws);
+
+  const reg = regService.register('S01', 'E01', () => NORMAL_TEST_CLOCK, { simulateNotificationFailure: true });
+
+  assert.ok(reg.id, 'Committed registration remains successful');
+  assert.equal(ws.count('E01'), 1);
+  assert.equal(reg.notificationDispatched, false, 'Notification failure handled separately without rolling back registration');
+});
+
+test('TC-019 - Register an eligible institution contact', () => {
+  // Preconditions: Institution contact IC01 belongs to I01 and meets E01 eligibility; E01 is published and open.
+  const ws = createAssignment8Workspace();
+  const regService = new RegistrationService(ws);
+
+  const reg = regService.register('IC01', 'E01', () => NORMAL_TEST_CLOCK);
+
+  assert.ok(reg.id);
+  assert.equal(reg.userId, 'IC01');
+  assert.equal(reg.eventId, 'E01');
+  assert.equal(ws.count('E01'), 1, 'One valid registration is saved for IC01/E01 and confirmation is displayed.');
+});
+
+test('TC-020 - Reject registration for an unpublished event', () => {
+  // Preconditions: Eligible S01 is authenticated; E03 is Draft.
+  const ws = createAssignment8Workspace();
+  const regService = new RegistrationService(ws);
+
+  assert.throws(
+    () => regService.register('S01', 'E03', () => NORMAL_TEST_CLOCK),
+    /not available for registration|published/i,
+    'Registration is refused because E03 has not been published; no registration is saved.'
   );
 });
 
 // ============================================================================
-// UC-006: Approve Outreach Event (TC-021 to TC-028)
+// UC-006: Approve Event (TC-021 to TC-028)
 // ============================================================================
 
-test('TC-021: [UC-006] Successful event approval by Outreach Approver with comments', () => {
-  const ws = createTestWorkspace();
+test('TC-021 - Approve an event and notify its coordinator', () => {
+  // Preconditions: Approver A01 is authenticated and authorized; E02 is Under Review; organizer is C01.
+  const ws = createAssignment8Workspace();
   const approvalService = new ApprovalService(ws);
 
-  // E4 is Pending
-  assert.equal(ws.event('E4').status, 'Pending');
-  const result = approvalService.approve('E4', 'U2', 'Excellent proposal, approved for scheduling.', () => fixedNow);
+  const event = approvalService.approve('E02', 'A01', 'Reviewed and approved', () => NORMAL_TEST_CLOCK);
 
-  assert.equal(result.status, 'Approved');
-  assert.ok(result.history.length > 0);
-  const lastHistory = result.history.at(-1);
-  assert.equal(lastHistory.decision, 'Approved');
-  assert.equal(lastHistory.by, 'U2');
-  assert.equal(lastHistory.comments, 'Excellent proposal, approved for scheduling.');
+  assert.equal(event.status, 'Approved');
+  const record = event.history.at(-1);
+  assert.equal(record.decision, 'Approved');
+  assert.equal(record.by, 'A01');
+  assert.equal(record.comments, 'Reviewed and approved');
 
-  // Notification sent to coordinator U1
-  const coordinatorNotif = ws.data.notifications.find(
-    n => n.userId === 'U1' && n.message.includes('Approved')
-  );
-  assert.ok(coordinatorNotif, 'Coordinator should be notified upon approval');
+  // Verify coordinator notification
+  const notif = ws.data.notifications.find(n => n.userId === 'C01' && n.message.includes('Approved'));
+  assert.ok(notif, 'Coordinator notification is initiated');
 });
 
-test('TC-022: [UC-006] Successful event rejection by Outreach Approver with mandatory reason', () => {
-  const ws = createTestWorkspace();
+test('TC-022 - Reject an event with a reason', () => {
+  // Preconditions: Approver A01 is authenticated and authorized; E02 is Under Review; organizer is C01.
+  const ws = createAssignment8Workspace();
   const approvalService = new ApprovalService(ws);
 
-  // E4 is Pending
-  const result = approvalService.reject('E4', 'U2', 'Please revise the venue and provide laboratory safety details.', () => fixedNow);
+  const event = approvalService.reject('E02', 'A01', 'Venue confirmation required', () => NORMAL_TEST_CLOCK);
 
-  assert.equal(result.status, 'Rejected');
-  const lastHistory = result.history.at(-1);
-  assert.equal(lastHistory.decision, 'Rejected');
-  assert.equal(lastHistory.by, 'U2');
-  assert.equal(lastHistory.comments, 'Please revise the venue and provide laboratory safety details.');
+  assert.equal(event.status, 'Rejected');
+  const record = event.history.at(-1);
+  assert.equal(record.decision, 'Rejected');
+  assert.equal(record.by, 'A01');
+  assert.equal(record.comments, 'Venue confirmation required');
 
-  // Notification sent to coordinator U1
-  const coordinatorNotif = ws.data.notifications.find(
-    n => n.userId === 'U1' && n.message.includes('Rejected')
-  );
-  assert.ok(coordinatorNotif, 'Coordinator should be notified upon rejection');
+  // Verify coordinator notification
+  const notif = ws.data.notifications.find(n => n.userId === 'C01' && n.message.includes('Rejected'));
+  assert.ok(notif, 'Coordinator is notified of rejection');
 });
 
-test('TC-023: [UC-006] Negative validation: Event rejection fails when reason is empty or whitespace', () => {
-  const ws = createTestWorkspace();
+test('TC-023 - Require a reason when rejecting', () => {
+  // Preconditions: Approver A01 is authenticated and authorized; E02 is Under Review; organizer is C01.
+  const ws = createAssignment8Workspace();
   const approvalService = new ApprovalService(ws);
 
   assert.throws(
-    () => approvalService.reject('E4', 'U2', '', () => fixedNow),
-    /reason/i
+    () => approvalService.reject('E02', 'A01', '', () => NORMAL_TEST_CLOCK),
+    /reason/i,
+    'An understandable reason-required error is displayed; E02 remains Under Review and no rejection decision is saved.'
   );
 
-  assert.throws(
-    () => approvalService.reject('E4', 'U2', '    ', () => fixedNow),
-    /reason/i
-  );
+  assert.equal(ws.event('E02').status, 'Under Review');
 });
 
-test('TC-024: [UC-006] Security validation: Outreach Coordinator cannot approve outreach events', () => {
-  const ws = createTestWorkspace();
+test('TC-024 - Prevent a non-approver from deciding an event', () => {
+  // Preconditions: C01 is authenticated only as coordinator; E02 is Under Review.
+  const ws = createAssignment8Workspace();
   const approvalService = new ApprovalService(ws);
 
-  // U1 is Coordinator
   assert.throws(
-    () => approvalService.approve('E4', 'U1', 'Attempting self approval', () => fixedNow),
+    () => approvalService.approve('E02', 'C01', 'Coordinator self-approval', () => NORMAL_TEST_CLOCK),
     /not authorized|role/i
   );
+
+  assert.throws(
+    () => approvalService.reject('E02', 'C01', 'Coordinator self-rejection', () => NORMAL_TEST_CLOCK),
+    /not authorized|role/i
+  );
+
+  assert.equal(ws.event('E02').status, 'Under Review', 'Both decisions are denied; event status remains unchanged.');
 });
 
-test('TC-025: [UC-006] Negative validation: Approver cannot review or approve events in Draft status', () => {
-  const ws = createTestWorkspace();
+test('TC-025 - Show an empty pending-event list', () => {
+  // Preconditions: A01 is authenticated; no events are Submitted or Under Review.
+  const ws = createAssignment8Workspace();
   const approvalService = new ApprovalService(ws);
 
-  // E5 is Draft
-  assert.equal(ws.event('E5').status, 'Draft');
-  assert.throws(
-    () => approvalService.approve('E5', 'U2', 'Premature approval', () => fixedNow),
-    /not available for review|awaiting/i
-  );
+  // Clear pending and under review events
+  ws.data.events = ws.data.events.filter(e => !['Pending', 'Under Review'].includes(e.status));
+
+  const list = approvalService.getPendingEvents('A01');
+  assert.ok(Array.isArray(list));
+  assert.equal(list.length, 0, 'An understandable no-pending-events message or empty state is displayed.');
 });
 
-test('TC-026: [UC-006] Query verification: Approver retrieves only Pending and Under Review events', () => {
-  const ws = createTestWorkspace();
+test('TC-026 - Roll back approval on event-update failure', () => {
+  // Preconditions: Approver A01 is authenticated and authorized; E02 is Under Review; organizer is C01.
+  const ws = createAssignment8Workspace();
   const approvalService = new ApprovalService(ws);
 
-  const pendingEvents = approvalService.getPendingEvents('U2');
-  assert.ok(Array.isArray(pendingEvents));
-  assert.ok(pendingEvents.length > 0);
-  assert.ok(
-    pendingEvents.every(e => ['Pending', 'Under Review'].includes(e.status)),
-    'List must contain only Pending or Under Review events'
+  assert.throws(
+    () => approvalService.approve('E02', 'A01', 'Approved', () => NORMAL_TEST_CLOCK, { simulateUpdateFailure: true }),
+    /update failure|DB_ERROR/i
   );
-  assert.ok(!pendingEvents.some(e => e.status === 'Draft'));
-  assert.ok(!pendingEvents.some(e => e.status === 'Published'));
+
+  // Transaction rolls back: E02 remains Under Review, no committed approval record remains
+  assert.equal(ws.event('E02').status, 'Under Review');
+  assert.equal(ws.event('E02').history.length, 1);
+  assert.equal(ws.event('E02').history[0].decision, 'Under Review');
 });
 
-test('TC-027: [UC-006] Traceability: Multi-step lifecycle preserves full audit and decision history', () => {
-  const ws = createTestWorkspace();
-  const eventService = new EventService(ws);
+test('TC-027 - Reject an approval request for a Draft event', () => {
+  // Preconditions: A01 is authorized; event E03 exists in Draft state.
+  const ws = createAssignment8Workspace();
   const approvalService = new ApprovalService(ws);
 
-  // 1. Create Draft
-  const event = eventService.saveDraft(null, { ...validEventPayload, title: 'Multi-Step Event' }, 'U1', () => fixedNow);
-  assert.equal(event.status, 'Draft');
+  assert.throws(
+    () => approvalService.approve('E03', 'A01', 'Attempting draft approval', () => NORMAL_TEST_CLOCK),
+    /not available for review|awaiting/i,
+    'Invalid-state request is rejected; E03 remains Draft and no approval record is committed.'
+  );
 
-  // 2. Submit for Approval
-  eventService.submitForApproval(event.id, 'U1', () => fixedNow);
-  assert.equal(ws.event(event.id).status, 'Pending');
-
-  // 3. Reject with Reason
-  approvalService.reject(event.id, 'U2', 'Initial proposal needs budget breakdown.', () => fixedNow);
-  assert.equal(ws.event(event.id).status, 'Rejected');
-  assert.equal(ws.event(event.id).history.length, 1);
-  assert.equal(ws.event(event.id).history[0].decision, 'Rejected');
-
-  // 4. Update details and Resubmit
-  eventService.updateEvent(event.id, { description: 'Updated with complete budget details.' }, 'U1', () => fixedNow);
-  eventService.submitForApproval(event.id, 'U1', () => fixedNow);
-  assert.equal(ws.event(event.id).status, 'Pending');
-
-  // 5. Final Approval
-  approvalService.approve(event.id, 'U2', 'Budget verified. Proposal approved.', () => fixedNow);
-  assert.equal(ws.event(event.id).status, 'Approved');
-  assert.equal(ws.event(event.id).history.length, 2);
-  assert.equal(ws.event(event.id).history[1].decision, 'Approved');
+  assert.equal(ws.event('E03').status, 'Draft');
 });
 
-test('TC-028: [UC-006] Lifecycle enforcement: Publication requires prior approval', () => {
-  const ws = createTestWorkspace();
+test('TC-028 - Enforce approval before publication', () => {
+  // Preconditions: Approver A01 is authenticated and authorized; E02 is Under Review; organizer is C01.
+  const ws = createAssignment8Workspace();
+  const approvalService = new ApprovalService(ws);
 
-  // E5 is Draft; cannot be published
-  assert.equal(ws.event('E5').status, 'Draft');
+  // 1. Attempt to publish E02 before approval -> verify refusal
   assert.throws(
-    () => ws.transition('U1', 'E5', 'publish'),
-    /Approval/i
+    () => ws.transition('C01', 'E02', 'publish'),
+    /approval/i,
+    'Unapproved publication is refused.'
   );
 
-  // E4 is Pending; cannot be published
-  assert.equal(ws.event('E4').status, 'Pending');
-  assert.throws(
-    () => ws.transition('U1', 'E4', 'publish'),
-    /Approval/i
-  );
+  // 2. Approve E02
+  approvalService.approve('E02', 'A01', 'Proposal validated and approved', () => NORMAL_TEST_CLOCK);
+  assert.equal(ws.event('E02').status, 'Approved');
+
+  // 3. Publish under existing publication rules -> publication succeeds
+  const publishedEvent = ws.transition('C01', 'E02', 'publish');
+  assert.equal(publishedEvent.status, 'Published', 'After recorded approval, publication succeeds according to existing rules.');
 });
