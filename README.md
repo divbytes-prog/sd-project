@@ -4,7 +4,7 @@ An outreach management website based on Team T005's CS314 assignment PDF: six ro
 
 ## Current release status
 
-The website uses managed authentication, verified email, a central Neon database and trusted server permissions. The backend passed 64 domain/service tests and 26 isolated real-database/authentication checks, including last-seat concurrency, cross-device persistence, session revocation and audit permissions. See [the full PDF coverage audit](docs/requirements.md) for all 51 functional and 20 non-functional requirements and the limits of this verification.
+The website uses managed authentication, verified email, a central Neon database and server permissions. Current verification runs 106 domain, design-service, application-service and configuration tests, including the 28 Assignment 8 service checks. The Next.js production build and six HTTP guards on an isolated build pass. These are not authenticated browser end-to-end tests. Earlier database/authentication checks are documented in [the coverage audit](docs/requirements.md); that historical run was not repeated for this change. See [the current execution report](docs/testing/assignment-08/Test-Execution-Report.md) for the exact scope.
 
 ## Run locally
 
@@ -17,6 +17,8 @@ npm run dev
 ```
 
 The app opens on port 4173. For a production build, run `npm run build`, then `npm start`. Credentials must remain in ignored local environment files or encrypted hosting configuration.
+
+For an explicitly local, password-free demonstration only, set `IC_ALLOW_LOCAL_DEMO=true` and use `npm run dev`. This is never available on Vercel or in `NODE_ENV=production`. Missing hosted auth/database configuration returns an unavailable response rather than silently enabling demo identities or process-local storage.
 
 ## Accounts and roles
 
@@ -33,7 +35,7 @@ For registration approval setup and deployment, see [the Approver portal guide](
 ## Main workflows
 
 1. A coordinator creates a draft, completes its information and submits it for review.
-2. An approver approves or rejects it with a reason. Rejected proposals can be corrected and resubmitted.
+2. Optional registration opening/closing times are interpreted in IST. Leaving them blank preserves the entire date-only registration period for older events. An approver approves or rejects the event with a reason. Rejected proposals can be corrected and resubmitted.
 3. The coordinator publishes the approved event. Students and relevant institution contacts can submit participation requests while registration is open. An authorized Approver or Administrator accepts or rejects each Pending request.
 4. The server checks eligibility and duplicate requests at submission, and checks capacity again during approval in a database transaction. Existing confirmed places remain approved. Registrations and recipient-specific notifications persist across devices.
 5. Coordinators can update published logistics, send in-app reminders, cancel events and inspect participant lists.
@@ -48,7 +50,7 @@ For registration approval setup and deployment, see [the Approver portal guide](
 - `lib/workspace-service.mjs`: action allowlist, server authorization, validated fields and role-based response projection.
 - `lib/workspace-repository.js`: transactions, request idempotency, role lookup, central storage and audit writes.
 - `db/schema.sql`: application schema, confirmed-registration uniqueness and database capacity enforcement.
-- `tests/`: 64 passing domain/service checks.
+- `tests/`: 106 domain/design-service/application-service/configuration checks.
 - `scripts/verify-integration.mjs`: isolated real-auth/database tests, including competing users for one place and cross-device persistence.
 
 All workspace requests require a current verified managed session. Mutations validate origin, content type and body size. Credentials remain server-only. The restricted database role cannot rewrite audit records. Database administrators retain normal privileged maintenance access.
@@ -63,6 +65,6 @@ Configure the deployed origin as a trusted domain on its Neon Auth branch. `APP_
 
 ## Operational limits
 
-This is an academic working prototype. The isolated backend integration checks pass. Production health and UI should be checked after each deployment. Response-time targets, increasing concurrency, backup restoration, uptime and Safari/Firefox/mobile compatibility need measured verification. The current workspace-wide transaction lock prioritizes consistency for a small outreach team and should be benchmarked before scaling. In-app reminders are coordinator-triggered; a background scheduler and external notification channels are optional future work.
+This is an academic working prototype. The current automated service/configuration checks and isolated HTTP guards pass. Production health and UI should be checked after each deployment. Response-time targets, increasing concurrency, backup restoration, uptime and Safari/Firefox/mobile compatibility need measured verification. The current workspace-wide transaction lock prioritizes consistency for a small outreach team and should be benchmarked before scaling. In-app reminders are coordinator-triggered; a background scheduler and external notification channels are optional future work.
 
 InstituteConnect · Team T005 · CS314 Software Development Laboratory · LNMIIT, Jaipur.
