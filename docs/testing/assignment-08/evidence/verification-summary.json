@@ -1,0 +1,53 @@
+{
+  "scope": "Repository automated tests and isolated production-build HTTP guards; not authenticated UI E2E",
+  "sourceBaseline": "12ea22f81af72849b75644e1c10e444455f2c948",
+  "runner": "Vercel Sandbox, Node.js 22.23.4",
+  "baseline": {
+    "tests": 92,
+    "passed": 92,
+    "failed": 0,
+    "skipped": 0
+  },
+  "updated": {
+    "tests": 106,
+    "passed": 106,
+    "failed": 0,
+    "skipped": 0,
+    "assignment8ServiceTests": 28
+  },
+  "build": "npm run build: success",
+  "isolatedHttp": {
+    "checks": 6,
+    "passed": 6
+  },
+  "caseRequirements": [
+    "FR-012, FR-013, FR-016",
+    "FR-012, FR-013, FR-016, NFR-009",
+    "FR-014",
+    "FR-013, FR-016",
+    "FR-005, FR-012, NFR-005",
+    "FR-012, FR-013, NFR-012",
+    "FR-012, FR-013",
+    "FR-012, FR-013",
+    "FR-027, FR-028, FR-031, FR-043, NFR-011",
+    "FR-027, FR-028",
+    "FR-029, NFR-011",
+    "FR-030, NFR-011",
+    "FR-030",
+    "FR-027",
+    "FR-027",
+    "FR-027, NFR-004",
+    "FR-030, NFR-003, NFR-011",
+    "FR-027, FR-031, FR-043, NFR-011",
+    "FR-027, FR-028, FR-031",
+    "FR-027",
+    "FR-017",
+    "FR-018, FR-019",
+    "FR-018, FR-019, NFR-009",
+    "FR-005, FR-017, FR-018, NFR-005",
+    "FR-017, FR-018",
+    "FR-017, NFR-012",
+    "FR-017",
+    "FR-017, FR-020"
+  ]
+}
