@@ -1,1 +1,1 @@
-{"framework":"nextjs","buildCommand":"npm run build","regions":["iad1"],"functions":{"app/api/workspace/route.js":{"maxDuration":60}}}
+{"framework":"nextjs","buildCommand":"npm run build && node scripts/seed-approval-dummies.mjs","regions":["iad1"],"functions":{"app/api/workspace/route.js":{"maxDuration":60}}}
